@@ -1,9 +1,11 @@
 .data
 buffer: .space 1024
-fin: .asciiz "D:/MIPS-ASSWMBLY/calenderFile.txt"
 
+# file path may be different from device to another
+fin: .asciiz "D:\MIPS-ASSEMBLY/calenderFile.txt"
 
-file_content: .space 1024 #holds the file content 
+#holds the file content 
+file_content: .space 1024 
 newLine: .asciiz "\n"
 
 open_file_error: .asciiz"Error! opening the file"
@@ -32,16 +34,20 @@ g: .asciiz "g\n"
 h: .asciiz "h\n"
 q: .asciiz "q\n"
 
-test: .asciiz "11\n"
 
 choice: .space 10
-sentence:   .asciiz "Hello,MIPS Assembly!"  # Example sentence
+
 error: .asciiz "invalid input, try again\n"
 day_not_exist: .asciiz "Day not exist, try again\n"
 select_day:.asciiz " \n Please choose a day: "  
 day: .space 10
-choiced_day: .space 10
+
+# to take the day input from the user
 choiced_day_input: .space 10
+
+# the taken day without new line (used for comparision)
+choiced_day: .space 10
+
 
 .text
 .globl main
@@ -53,10 +59,9 @@ main:
 	#syscall
 	j START
 START: 
-	
-	jal print_file 
-
+	jal read_file 
 	j menu
+	
 menu:
 	#printing the menue 
 	la $a0, view_per_day		
@@ -123,15 +128,16 @@ selection:
 	jal strcmp
 	beq $v0,$zero, get_day
 	
+	
 	# if the user chice b
-	la $a1,b		
-	jal strcmp
-	beq $v0,$zero, print_set_days
+	#la $a1,b		
+	#jal strcmp
+	#beq $v0,$zero, 
 	
 	# if the user chice c
-	la $a1,c		
-	jal strcmp
-	beq $v0,$zero, print_given_day_slot
+	#la $a1,c		
+	#jal strcmp
+	#beq $v0,$zero, 
 	
 	# if the user chice d
 	#la $a1,d		
@@ -171,10 +177,11 @@ selection:
 	
 	j selection
 	
-print_file:
+read_file:
+	la   $a0, fin
+	move $t2,$a1
 	#open a file for writing
 	li   $v0, 13       # system call for open file
-	la   $a0, fin      # board file name
 	li   $a1, 0        # Open for reading
 	li   $a2, 0
 	syscall            # open a file (file descriptor returned in $v0)
@@ -201,11 +208,6 @@ print_file:
 		la   $a1, file_content  
 		la   $a2, buffer   # address of buffer to which to read
 		syscall            # read from file
-
-		# Print to the console
-		#li $v0, 4
-		#la $a0, file_content
-		#syscall
 		j closeFile
 		
 	closeFile:
@@ -227,10 +229,32 @@ get_day:
 	li $v0, 8
 	syscall
 	
+	la $t3, choiced_day_input
+	la $t2, choiced_day
+	
 	jal remove_new_line
+	
+	jal check_day
+	
+	beq $v0 ,$zero, print_slot
 
+		
+	la $a0, day_not_exist		
+	li $v0, 4
+	syscall
+	j get_day
+
+		
+	print_slot:
+		la $a0,welcome_message
+		li $v0, 4
+		syscall
+		j menu
+
+check_day:
+	move  $s0, $ra  
 	la $t4,file_content
-	la $t7,day
+	la $t7,day 	
    loop:
         lb $t6, ($t4)         # Load the byte at the current address in $t4
         addi $t4, $t4, 1
@@ -241,19 +265,21 @@ get_day:
         # Process the character as part of the day number
         sb $t6, 0($t7)         # Store the character in day buffer
         addi $t7, $t7, 1       # Move to the next position in day buffer
-
         j loop
 
     process_colon:
         # Null-terminate the day buffer
-        
          sb $zero, 0($t7)
- 
+	
+	
 	la $a1, choiced_day
 	la $a0,day
-	jal strcmp
 	
-	beq $v0,$zero, print_slot
+	jal strcmp
+
+	
+	# day is found
+	beq $v0,$zero, day_found
         
         # Reset the day buffer for the next line
         la $t7, day
@@ -265,38 +291,25 @@ get_day:
             addi $t4, $t4, 1
             j skip_line
             
- 	print_slot: 
- 	    	li $v0, 4             # system call code for print_string
-        	la $a0, day           # load the address of the day buffer
-        	syscall
-        	li $v0, 4             # system call code for print_string
-        	la $a0, quit_message           # load the address of the day buffer
-        	syscall
-        	li $v0, 4             # system call code for print_string
-        	la $a0, choiced_day           # load the address of the day buffer
-        	syscall
-        	j main
+ 	day_found: 
+ 	    	li $v0, 0        	
+		j exit_find_day
         
     	end_line:
-        # Continue to the next line
-        j loop
+        	# Continue to the next line
+        	j loop
 
     	end_loop:
-    	la $a0, day_not_exist		
-	li $a1, 256
-	li $v0, 4
-	syscall
-	j get_day
+    		la $a0, day_not_exist		
+		li $v0, 4
+		syscall
+		li $v0, 5  
+				
+	exit_find_day:
+		move  $ra, $s0	
+		jr $ra
 	
-      
 
-
-print_set_days:
-	j main
-	
-	
-print_given_day_slot:
-	j main
 
 
 strcmp:  		
@@ -332,17 +345,9 @@ strcmp:
 		# Exit function
 		jr $ra
 	
-exit:
-	la $a0, quit_message
-	li $v0, 4
-	syscall
-
-	li $v0, 10
-	syscall	
 
 remove_new_line:
-	la $t3, choiced_day_input
-	la $t2,choiced_day
+	
 	loop_new_line:
         lb $t6, ($t3)         
         addi $t3, $t3, 1
@@ -354,3 +359,12 @@ remove_new_line:
 continue:
 	sb $zero, 0($t2)
 	jr $ra
+
+
+exit:
+	la $a0, quit_message
+	li $v0, 4
+	syscall
+
+	li $v0, 10
+	syscall	
