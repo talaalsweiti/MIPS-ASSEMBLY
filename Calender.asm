@@ -59,7 +59,8 @@ given_day: .space 10
 given_day_input: .space 10
 
 
-enter_slot: .asciiz "\n Please enter the slot sapereted by '-' :\n"
+enter_slot_1: .asciiz "\n Please enter the first number in the slot: "
+enter_slot_2: .asciiz "\n Please enter the second number in the slot: "
 given_slot: .space 20
 first_num: .space 10
 sec_num: .space 10
@@ -282,89 +283,51 @@ get_given_slot_in_given_day:
 	
 	get_slot_in_day:
 		
-	la $a0, enter_slot		
+	la $a0, enter_slot_1		
 	li $a1, 256
 	li $v0, 4
 	syscall
 	
-	# get the choice from the user
-	la $a0, given_slot
-	li $v0, 8
+
+	li $v0, 5
 	syscall	
 	
+	move $t0, $v0
+	
+	la $a0, newLine		
+	li $v0, 4
+	syscall
+	
+	la $a0, enter_slot_2		
+	li $a1, 256
+	li $v0, 4
+	syscall
+	
+	li $v0, 5
+	syscall	
+	
+	move $t1, $v0
 
-	la $t4,given_slot
-	la $t7,first_num 
-	la $t5,sec_num 	
-	
-	
-   	loop_1:
-        	lb $t6, ($t4)         
-        	addi $t4, $t4, 1
-        	#beqz $t6, end_loop_1   
-        	#beq $t6, '\n', end_line_1 
-        	beq $t6, '-', process_sec_num 
-
-        	sb $t6, 0($t7)         # Store the character in first_num buffer
-        	addi $t7, $t7, 1       # Move to the next position in day buffer
-        	j loop_1
-	
-	
-  	process_sec_num:
-        # Null-terminate the day buffer
-        sb $zero, 0($t7)	
-       store_sec_num:
-           	lb $t6, ($t4)
-           	addi $t4, $t4, 1
-           	beqz $t6, procces_nums    # Exit the loop if the null terminator is encountered
-           	beq $t6, '\n', procces_nums    # Exit the loop when newline is encountered
-           	beq $t6, '-', store_sec_num
-           	sb $t6, 0($t5) 
-           	addi $t5, $t5, 1
-            	j store_sec_num
-            
-         
-	procces_nums:
-	 	sb $zero, 0($t5)
 	 	
-	 	
-	 	move $a0, $t5
-	 	jal str_to_int
-	 	move $t5, $v0
-	 	
-	 	
-	 	move $a0, $t7
-	 	jal str_to_int
-	 	#move $t7, $v0
-	 	addi $t7, $v0, 12 
-	 	la $a0,  first_num		
-		li $v0, 4
-		syscall
-	 	# if num1 or num2 is equal to 6 or 7 then not valid
-		#beq $t7, 6, num_not_valid
-		#beq $t7, 7, num_not_valid
+	 # if num1 or num2 is equal to 6 or 7 then not valid
+	beq $t0, 6, num_not_valid
+	beq $t0, 7, num_not_valid
 			
-		#beq $t5, 7, num_not_valid
-		#beq $t5, 6, num_not_valid
+	beq $t1, 7, num_not_valid
+	beq $t1, 6, num_not_valid
 		
-		# if num1 is less than or equal 5, we need to add 12 
-		#ble $t7, 5 , add_12_num1
+	# if num1 is less than or equal 5, we need to add 12 
+	ble $t0, 5 , add_12_num1
 		
-		#add_12_num1:
-		
-		#la $a0,  newLine	
-		#li $v0, 4
-		#syscall
-    		#addi $t7, $t7, 12  # Add 12 to the loaded value
-
+	add_12_num1:
+    	addi $t0, $t0, 12  # Add 12 to the loaded value
 					
-		# if num2 is less than or equal 5, we need to add 12 
-		ble $t5, 5 , add_12_num2
-		add_12_num2:
-		  addi $t5, $t5, 12
-		  
-		  
-		j find_print_slot
+	# if num2 is less than or equal 5, we need to add 12 
+	ble $t1, 5 , add_12_num2
+	add_12_num2:
+	addi $t1, $t1, 12
+	    
+	j find_print_slot
 	
 		
 	num_not_valid:
@@ -376,15 +339,21 @@ get_given_slot_in_given_day:
 				
 	
  	find_print_slot:
- 	#num1 is in t7 and num2 in t5
- 		la $a0,  first_num		
-		li $v0, 4
+ 		li $v0,1
+		move $a0, $t0
 		syscall
 		
-		la $a0, sec_num		
+		j print_slot
+		
+		#print day_slot 
+		continue_process_slot:
+		la $a0, day_slot
+ 	    	li $a1, 256
 		li $v0, 4
 		syscall
-		
+		la $a0,newLine
+		li $v0, 4
+		syscall
 		la $a1 , choiced_day
  		j menu
  
@@ -465,7 +434,7 @@ get_day:
 
 	
 	# day is found
-	beq $v0,$zero,  copy_slot
+	beq $v0,$zero, copy_slot
         
         # Reset the day buffer for the next line
         la $t7, day
@@ -487,6 +456,12 @@ get_day:
             
  	slot_found: 
  	    	#print slot 
+ 	    	move $a0,$a3	
+		la $a1,c
+		jal strcmp
+		beq $v0,$zero, continue_process_slot
+		
+		
  	    	la $a0, select_day_sentence_1
  	    	li $a1, 256
 		li $v0, 4
