@@ -40,6 +40,8 @@ choice: .space 10
 error: .asciiz "invalid input, try again\n"
 day_not_exist: .asciiz "Day not exist, try again\n"
 select_day:.asciiz " \n Please choose a day: "  
+select_day_sentence_1:.asciiz " \n The slots for day "
+ 
 day: .space 10
 
 # to take the day input from the user
@@ -47,7 +49,7 @@ choiced_day_input: .space 10
 
 # the taken day without new line (used for comparision)
 choiced_day: .space 10
-
+day_slot :  .space 100
 
 .text
 .globl main
@@ -238,19 +240,88 @@ get_day:
 	
 	beq $v0 ,$zero, print_slot
 
-		
 	la $a0, day_not_exist		
 	li $v0, 4
 	syscall
+	
+	#or j menu
 	j get_day
-
 		
 	print_slot:
-		la $a0,welcome_message
+		la $t4,file_content
+		la $t7,day 
+		la $t5,day_slot 	
+   	loop_0:
+        	lb $t6, ($t4)         
+        	addi $t4, $t4, 1
+        	beqz $t6, end_loop_0   
+        	beq $t6, '\n', end_line_0 
+        	beq $t6, ':', process_slot 
+
+        	# Process the character as part of the day number
+        	sb $t6, 0($t7)         # Store the character in day buffer
+        	addi $t7, $t7, 1       # Move to the next position in day buffer
+        	j loop_0
+
+     process_slot:
+        # Null-terminate the day buffer
+         sb $zero, 0($t7)
+	
+	
+	la $a1, choiced_day
+	la $a0,day
+	
+	jal strcmp
+
+	
+	# day is found
+	beq $v0,$zero,  copy_slot
+        
+        # Reset the day buffer for the next line
+        la $t7, day
+        skip_line_0:
+            lb $t6, ($t4)
+            beqz $t6, loop_0    # Exit the loop if the null terminator is encountered
+            beq $t6, '\n', loop_0  # Exit the loop when newline is encountered
+            addi $t4, $t4, 1
+            j    skip_line_0
+            
+         copy_slot:
+            lb $t6, ($t4)
+            beqz $t6, slot_found    
+            beq $t6, '\n', slot_found    
+            sb $t6 , 0($t5)
+            addi $t4, $t4, 1
+            addi $t5, $t5, 1
+            j copy_slot
+            
+ 	slot_found: 
+ 	    	#print slot 
+ 	    	la $a0, select_day_sentence_1
 		li $v0, 4
 		syscall
-		j menu
+		la $a0,choiced_day
+		li $v0, 4
+		syscall
+		la $a0,newLine
+		li $v0, 4
+		syscall
+ 	    	la $a0, day_slot
+		li $v0, 4
+		syscall
+		la $a0,newLine
+		li $v0, 4
+		syscall
+		la $t5, day_slot
+		j end_loop_0
+		
+	end_line_0:
+        # Continue to the next line
+        	j loop_0
 
+    	end_loop_0:
+		j menu 
+	
 check_day:
 	move  $s0, $ra  
 	la $t4,file_content
@@ -300,10 +371,7 @@ check_day:
         	j loop
 
     	end_loop:
-    		la $a0, day_not_exist		
-		li $v0, 4
-		syscall
-		li $v0, 5  
+		li $v0, 1  
 				
 	exit_find_day:
 		move  $ra, $s0	
@@ -331,6 +399,7 @@ strcmp:
 		# Jump to loop1
 		j loop1           	
 	equal:
+		bnez $s6, notequal 
 		# Set return value to 1
 		li $v0, 0  
 		#Jump to done      	
