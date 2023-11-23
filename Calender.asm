@@ -52,6 +52,7 @@ choiced_day_input: .space 10
 choiced_day: .space 10
 day_slot :  .space 100
 line: .asciiz "\n ______________________________________________________________________ \n "
+current_num: .space 10
 
 
 # the taken day without new line (used for comparision)
@@ -65,6 +66,7 @@ given_slot: .space 20
 first_num: .space 10
 sec_num: .space 10
 invalid_slot: .asciiz "\n The enterd slot is not valid, please try again!\n"
+
 
 .text
 .globl main
@@ -262,14 +264,6 @@ get_given_slot_in_given_day:
 	la $t2, choiced_day
 	jal remove_new_line
 	
-	la $a0, choiced_day	
-	li $v0, 4
-	syscall
-	
-	la $a0, given_day_input		
-	li $v0, 4
-	syscall
-	
 	#j menu
 	jal check_day
 	
@@ -339,21 +333,54 @@ get_given_slot_in_given_day:
 				
 	
  	find_print_slot:
- 		li $v0,1
-		move $a0, $t0
-		syscall
-		
+ 		
 		j print_slot
 		
 		#print day_slot 
 		continue_process_slot:
-		la $a0, day_slot
- 	    	li $a1, 256
+   
+		la $t5,day_slot 
+		la $t7, current_num
+	
+   		loop_5:
+        	lb $t6, ($t5)         
+        	addi $t5, $t5, 1
+        	beqz $t6, done_5   
+        	beq $t6, '\n', done_5
+        	beq $t6, '-', process_slot_5 
+		beq $t6, ' ', loop_5
+        	beq $t6, 'O', loop_5
+        	beq $t6, 'L', loop_5
+        	beq $t6, 'M', loop_5
+        	beq $t6, ',', loop_5
+        	beq $t6, 'H', loop_5
+        	sb $t6, 0($t7)         # Store the character in day buffer
+        	addi $t7, $t7, 1       # Move to the next position in day buffer
+        	j loop_5
+
+    		process_slot_5:
+    		 #sb $zero, 0($t7)
+    		 
+    		la  $a0, current_num
+   	 	jal str_to_int
+   	 	
+   	 	# Assume $v0 contains the value you want to print
+		
+		move $a0, $v0  # Load the value to be printed into $a0
+		li $v0, 1      # System call code for printing an integer
+		syscall
+   	 	
+   	 	
+   	 	
+	 	la $t7, current_num
+	 	
+	 	la $a0,newLine
 		li $v0, 4
 		syscall
-		la $a0,newLine
-		li $v0, 4
-		syscall
+		
+		
+    		j loop_5
+    		done_5:
 		la $a1 , choiced_day
  		j menu
  
@@ -604,21 +631,23 @@ continue:
 	
 str_to_int:
     li $v0, 0            # Initialize result to 0
-    li $t0, 10           # Set divisor to 10 for decimal digits
+    li $t4, 10           # Set divisor to 10 for decimal digits
 
     loop_3:
-        lb $t1, 0($a0)    # Load the current character from the string
-        beqz $t1, done    # If the character is null (end of string), exit the loop
+        lb $t3, 0($a0)    # Load the current character from the string
+        beq $t3, $zero, done_3  # If the character is null (end of string), exit the loop
 
-        sub $t1, $t1, '0'  # Convert ASCII character to numerical value
-        mul $v0, $v0, $t0  # Multiply the current result by the divisor
-        add $v0, $v0, $t1  # Add the numerical value of the current digit
+        sub $t3, $t3, '0'  # Convert ASCII character to numerical value
+        mul $v0, $v0, $t4  # Multiply the current result by the divisor
+        add $v0, $v0, $t3  # Add the numerical value of the current digit
         addi $a0, $a0, 1   # Move to the next character in the string
-        j loop_3             # Repeat the loop
+        j loop_3          # Repeat the loop
 
     done_3:
         jr $ra             # Return with the result in $v0
 
+
+    
 exit:
 	la $a0, quit_message
 	li $a1, 256
