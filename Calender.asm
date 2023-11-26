@@ -2,10 +2,12 @@
 buffer: .space 1024
 
 # file path may be different from device to another
-fin: .asciiz "D:\MIPS-ASSEMBLY/calenderFile.txt"
+fin: .asciiz "D:\\MIPS-ASSEMBLY\\calenderFile.txt"
 
+
+#"D:\MIPS-ASSEMBLY\calenderFile.txt"
 #holds the file content 
-file_content: .space 1024 
+file_content: .space 1024
 newLine: .asciiz "\n"
 
 open_file_error: .asciiz"Error! opening the file"
@@ -52,9 +54,10 @@ choiced_day_input: .space 10
 choiced_day: .space 10
 day_slot :  .space 100
 line: .asciiz "\n ______________________________________________________________________ \n "
-current_num: .space 10
-
-
+current_num_1: .space 10
+current_num_2: .space 10
+extracted_slot: .space 100
+category: .space 5
 # the taken day without new line (used for comparision)
 given_day: .space 10
 given_day_input: .space 10
@@ -334,14 +337,14 @@ get_given_slot_in_given_day:
 	
  	find_print_slot:
  		
+ 		#to get this day slot
 		j print_slot
 		
-		#print day_slot 
-		continue_process_slot:
-   
-		la $t5,day_slot 
-		la $t7, current_num
 	
+		continue_process_slot:
+		la $t5,day_slot 
+		la $t2, current_num_1
+		
    		loop_5:
         	lb $t6, ($t5)         
         	addi $t5, $t5, 1
@@ -349,52 +352,105 @@ get_given_slot_in_given_day:
         	beq $t6, '\n', done_5
         	beq $t6, '-', process_dash
 		beq $t6, ' ', loop_5
-        	beq $t6, 'O', loop_5
-        	beq $t6, 'L', loop_5
-        	beq $t6, 'M', loop_5
-        	beq $t6, ',', loop_5
-        	beq $t6, 'H', loop_5
-        	sb $t6, 0($t7)        
-        	addi $t7, $t7, 1       
+        	sb $t6, 0($t2)        
+        	addi $t2, $t2, 1       
         	j loop_5
 
     		process_dash:
-    		sb $zero, 0($t7)
+    		sb $zero, 0($t2)
     		 
-    		la  $a0, current_num
+    		la  $a0, current_num_1
    	 	jal str_to_int
 		
-		move $a0, $v0  # Load the value to be printed into $a0
-		li $v0, 1      # System call code for printing an integer
-		syscall
+		move $t2, $v0
+	 
+		#ble $t2, 5, add_12_1
+		#j check_first_slot
 		
-			
-	 	la $a0,space
-		li $v0, 4
-		syscall
+		#add_12_1:
+		#addi $t2, $t2, 12
 		
-   	 	#reset
-	 	la $t7, current_num
+		
+		#check_first_slot:
+		#bgt $t0, $t2, continue_to_get_sec_num
+		#move $a0, $t2  # Load the value to be printed into $a0
+		#li $v0, 1      # System call code for printing an integer
+		#syscall
+		
+		
+		
+		
+		continue_to_get_sec_num:
+   	 	
+	 	la $t3, current_num_2
+	 	
+		
+		
    	 	#get the second num
    	 	get_sec_slot:
             	lb $t6, ($t5)         
         	addi $t5, $t5, 1
-        	beq $t6, ' ', print_sec_num
-        	sb $t6, 0($t7)         
-        	addi $t7, $t7, 1       
-        	
+        	beq $t6, ' ', get_category
+        	beqz $t6, get_category
+        	sb $t6, 0($t3)         
+        	addi $t3, $t3, 1       
             	j    get_sec_slot
    	 	
-   	 	print_sec_num:
-   	 	sb $zero, 0($t7)
-   	 	la  $a0, current_num
+   	 	get_category:
+   	 	sb $zero, 0($t3)
+   	 	la  $a0, current_num_2
    	 	jal str_to_int
-   	 	move $a0, $v0  # Load the value to be printed into $a0
-		li $v0, 1      # System call code for printing an integer
+   	 	la $t3, current_num_2
+   	 	
+   	 	move $t3,$v0
+   	 	
+   	 	la $t4, category
+   	 	get_category_loop :
+   	 	lb $t6, ($t5)         
+        	addi $t5, $t5, 1
+        	beq $t6, '\n',print_result
+        	beqz $t6, print_result
+        	beq $t6, ',', print_result
+        	sb $t6, 0($t4)         
+        	addi $t4, $t4, 1       
+        	
+            	j     get_category_loop   	 	
+   	 	
+   	 	print_result:
+   	 	
+   	 	sb $zero, 0($t4)
+   	 	
+   	 	
+   
+   	 	
+   	 	la $a0,current_num_1
+		li $v0, 4
+		syscall
+		
+		la $a0,space
+		li $v0, 4
+		syscall
+		
+		la $a0,current_num_2
+		li $v0, 4
+		syscall
+		
+		
+		la $a0,space
+		li $v0, 4
 		syscall
    	 	
+   	 	la $a0,category
+		li $v0, 4
+		syscall
+   	 	
+   	 	
+   	 	
+   	 
 	 	#reset
-	 	la $t7, current_num
+	 	la $t2, current_num_1
+	 	la $t3, current_num_2
+	 	la $t4, category
 	 	
 	 	la $a0,newLine
 		li $v0, 4
@@ -548,7 +604,12 @@ get_day:
 	
 check_day:
 	move  $s0, $ra  
-	la $t4,file_content
+	
+	la $a0,file_content
+	li $v0, 4
+	syscall
+	
+	move $t4,$a0
 	la $t7,day 	
    loop:
         lb $t6, ($t4)         # Load the byte at the current address in $t4
