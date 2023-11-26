@@ -34,7 +34,7 @@ g: .asciiz "g\n"
 h: .asciiz "h\n"
 q: .asciiz "q\n"
 yes: .asciiz "yes\n"
-
+space: .asciiz " "
 choice: .space 10
 
 error: .asciiz "\n Invalid input, try again\n"
@@ -347,31 +347,53 @@ get_given_slot_in_given_day:
         	addi $t5, $t5, 1
         	beqz $t6, done_5   
         	beq $t6, '\n', done_5
-        	beq $t6, '-', process_slot_5 
+        	beq $t6, '-', process_dash
 		beq $t6, ' ', loop_5
         	beq $t6, 'O', loop_5
         	beq $t6, 'L', loop_5
         	beq $t6, 'M', loop_5
         	beq $t6, ',', loop_5
         	beq $t6, 'H', loop_5
-        	sb $t6, 0($t7)         # Store the character in day buffer
-        	addi $t7, $t7, 1       # Move to the next position in day buffer
+        	sb $t6, 0($t7)        
+        	addi $t7, $t7, 1       
         	j loop_5
 
-    		process_slot_5:
-    		 #sb $zero, 0($t7)
+    		process_dash:
+    		sb $zero, 0($t7)
     		 
     		la  $a0, current_num
    	 	jal str_to_int
-   	 	
-   	 	# Assume $v0 contains the value you want to print
 		
 		move $a0, $v0  # Load the value to be printed into $a0
 		li $v0, 1      # System call code for printing an integer
 		syscall
+		
+			
+	 	la $a0,space
+		li $v0, 4
+		syscall
+		
+   	 	#reset
+	 	la $t7, current_num
+   	 	#get the second num
+   	 	get_sec_slot:
+            	lb $t6, ($t5)         
+        	addi $t5, $t5, 1
+        	beq $t6, ' ', print_sec_num
+        	sb $t6, 0($t7)         
+        	addi $t7, $t7, 1       
+        	
+            	j    get_sec_slot
    	 	
+   	 	print_sec_num:
+   	 	sb $zero, 0($t7)
+   	 	la  $a0, current_num
+   	 	jal str_to_int
+   	 	move $a0, $v0  # Load the value to be printed into $a0
+		li $v0, 1      # System call code for printing an integer
+		syscall
    	 	
-   	 	
+	 	#reset
 	 	la $t7, current_num
 	 	
 	 	la $a0,newLine
@@ -380,6 +402,7 @@ get_given_slot_in_given_day:
 		
 		
     		j loop_5
+    		
     		done_5:
 		la $a1 , choiced_day
  		j menu
