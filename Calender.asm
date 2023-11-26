@@ -417,7 +417,6 @@ get_given_slot_in_given_day:
             	j     get_category_loop   	 	
    	 	
    	 	print_result:
-   	 	
    	 	sb $zero, 0($t4)
    	 	
    	 	
@@ -451,7 +450,6 @@ get_given_slot_in_given_day:
 	 	la $t2, current_num_1
 	 	la $t3, current_num_2
 	 	la $t4, category
-	 	
 	 	la $a0,newLine
 		li $v0, 4
 		syscall
