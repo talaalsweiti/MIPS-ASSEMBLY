@@ -9,6 +9,7 @@ fin: .asciiz "D:\\MIPS-ASSEMBLY\\calenderFile.txt"
 #holds the file content 
 file_content: .space 1024
 newLine: .asciiz "\n"
+dash: .asciiz "-"
 
 open_file_error: .asciiz"Error! opening the file"
 
@@ -58,6 +59,7 @@ current_num_1: .space 10
 current_num_2: .space 10
 extracted_slot: .space 100
 category: .space 5
+answer_slot: .space 100
 # the taken day without new line (used for comparision)
 given_day: .space 10
 given_day_input: .space 10
@@ -74,6 +76,7 @@ invalid_slot: .asciiz "\n The enterd slot is not valid, please try again!\n"
 .text
 .globl main
 
+# TODO : check if invalid day in the file
 main: 	
 	#la $a0, welcome_message	
 	#li $a1, 256
@@ -251,6 +254,7 @@ read_file:
 
 
 get_given_slot_in_given_day:
+	la $s0,answer_slot
 	
 	la $a0, select_day		
 	li $a1, 256
@@ -305,42 +309,55 @@ get_given_slot_in_given_day:
 	
 	move $t1, $v0
 
-	 	
-	 # if num1 or num2 is equal to 6 or 7 then not valid
-	beq $t0, 6, num_not_valid
-	beq $t0, 7, num_not_valid
-			
-	beq $t1, 7, num_not_valid
-	beq $t1, 6, num_not_valid
-		
+	 		
 	# if num1 is less than or equal 5, we need to add 12 
-	ble $t0, 5 , add_12_num1
-		
+	ble $t0, 5 , add_12_num1	
+	
+	ble $t1, 5 , add_12_num2
+	
+	j find_print_slot
+			
 	add_12_num1:
     	addi $t0, $t0, 12  # Add 12 to the loaded value
+			
 					
-	# if num2 is less than or equal 5, we need to add 12 
-	ble $t1, 5 , add_12_num2
-	add_12_num2:
-	addi $t1, $t1, 12
+	ble $t1, 5 , add_12_num2								
 	    
 	j find_print_slot
 	
-		
+	add_12_num2:
+	addi $t1, $t1, 12
+	
+	    
+	j find_print_slot
 	num_not_valid:
 		la $a0, invalid_slot			
 		li $a1, 256
 		li $v0, 4
 		syscall
+		j menu
 	
 				
 	
  	find_print_slot:
+ 		bgt $t0 , $t1, num_not_valid 
+ 		
+ 		### TODO remove
+ 		#move $a0,$t0
+ 		#li $v0,1
+ 		#syscall
+ 		#la $a0,space
+ 		#li $v0,4
+ 		#syscall
+ 		#move $a0,$t1
+ 		#li $v0,1
+ 		#syscall
+ 		#la $a0,newLine
+ 		#li $v0,4
+ 		#syscall
  		
  		#to get this day slot
 		j print_slot
-		
-	
 		continue_process_slot:
 		la $t5,day_slot 
 		la $t2, current_num_1
@@ -361,30 +378,20 @@ get_given_slot_in_given_day:
     		 
     		la  $a0, current_num_1
    	 	jal str_to_int
-		
 		move $t2, $v0
-	 
-		#ble $t2, 5, add_12_1
-		#j check_first_slot
 		
-		#add_12_1:
-		#addi $t2, $t2, 12
+		ble $t2, 5, add_12_1
 		
+		j get_sec_number
 		
-		#check_first_slot:
-		#bgt $t0, $t2, continue_to_get_sec_num
-		#move $a0, $t2  # Load the value to be printed into $a0
-		#li $v0, 1      # System call code for printing an integer
-		#syscall
+		add_12_1:
+		addi $t2, $t2, 12
 		
 		
 		
-		
-		continue_to_get_sec_num:
-   	 	
+		get_sec_number:
+		  	 	
 	 	la $t3, current_num_2
-	 	
-		
 		
    	 	#get the second num
    	 	get_sec_slot:
@@ -398,62 +405,115 @@ get_given_slot_in_given_day:
    	 	
    	 	get_category:
    	 	sb $zero, 0($t3)
+   	 	
    	 	la  $a0, current_num_2
-   	 	jal str_to_int
-   	 	la $t3, current_num_2
-   	 	
+   	 	jal str_to_int  	 
    	 	move $t3,$v0
-   	 	
+   	 	ble $t3, 5, add_12_3
+		
+		j get_category_
+		
+		add_12_3:
+		addi $t3, $t3, 12
+		
+   	 	get_category_:
    	 	la $t4, category
    	 	get_category_loop :
    	 	lb $t6, ($t5)         
         	addi $t5, $t5, 1
-        	beq $t6, '\n',print_result
-        	beqz $t6, print_result
-        	beq $t6, ',', print_result
+        	beq $t6, '\n',check_the_slots
+        	beqz $t6, check_the_slots
+        	beq $t6, ',', check_the_slots
         	sb $t6, 0($t4)         
         	addi $t4, $t4, 1       
         	
-            	j     get_category_loop   	 	
-   	 	
-   	 	print_result:
+            	j     get_category_loop  
+		
+		check_the_slots:
    	 	sb $zero, 0($t4)
    	 	
+   	 	#branch if t0 is greater than or equal t2
+   	 	bge $t0,$t2, check_second_slot
    	 	
-   
+   	 	bge $t1,$t2, take_t2_as_start_slot 
+   	 	j skip
    	 	
-   	 	la $a0,current_num_1
-		li $v0, 4
-		syscall
-		
-		la $a0,space
-		li $v0, 4
-		syscall
-		
-		la $a0,current_num_2
-		li $v0, 4
-		syscall
-		
-		
-		la $a0,space
-		li $v0, 4
-		syscall
+   	 	take_t2_as_start_slot:
+   	 	bge $t2,13, minus_12
    	 	
-   	 	la $a0,category
-		li $v0, 4
-		syscall
+   	 	j print_start_time_0
+   	 	minus_12:
+   	 	subi $t2,$t2,12
    	 	
+   	 	print_start_time_0:
+   	 	move $a0, $t2
+   	 	li $v0,1
+   	 	syscall
+   	 	
+   	 	j check_end_time  
+   	 	  
+   	 	check_second_slot:
+   	 	bgt $t0, $t3 , skip
+   	 	
+   	 	bge $t0,13, minus_12_1
+   	 	j print_start_time_1
    	 	
    	 	
-   	 
+   	 	minus_12_1:
+   	 	subi $t0,$t0,12
+   	 	
+   	 	print_start_time_1:
+   	 	move $a0, $t0
+   	 	li $v0,1
+   	 	syscall
+   	 	
+   	 	check_end_time:
+   	 	blt $t1,$t3, t1_as_end_time
+   	 	   	 	
+   	 	j print_result
+   	 	
+   	 	t1_as_end_time: 	
+   	 	move $t3,$t1
+   	 	
+   	 	print_result:
+   	 	
+   	 	bge $t3,13,minus_12_2
+   	 	j print_res
+   	 	
+   	 	
+   	 	minus_12_2:
+   	 	subi $t3,$t3,12
+   	 	
+   	 	print_res:
+   		la $a0, space
+   	 	li $v0,4
+   	 	syscall
+   	 	
+   	 	
+   	 	move $a0, $t3
+   	 	li $v0,1
+   	 	syscall
+   	 	
+   	 	la $a0, space
+   	 	li $v0,4
+   	 	syscall
+   	 	
+   	 	la $a0, category
+   	 	li $v0,4
+   	 	syscall
+   	 	
+   	 	
+   	 	la $a0, newLine
+   	 	li $v0,4
+   	 	syscall
+   	 	
+	
+		skip:
 	 	#reset
 	 	la $t2, current_num_1
 	 	la $t3, current_num_2
 	 	la $t4, category
-	 	la $a0,newLine
-		li $v0, 4
-		syscall
-		
+	 		
 		
     		j loop_5
     		
