@@ -88,6 +88,8 @@ print_L_sen: .asciiz "\n Number of Lectures in hours: "
 print_OH_sen: .asciiz "\n Number of Office Hours in hours: "
 print_M_sen: .asciiz "\n Number of Meetings in hours: "
 div_by_zero: .asciiz "\n Error: Division by zero\n"
+ratio_answer: .asciiz "\n The ratio: "
+avg_answer: .asciiz "\n The average lectures per day: "
 
 .text
 .globl main
@@ -488,16 +490,35 @@ count_num_of_hours:
 	div $t0, $t2
 	mflo $t6  # t6 now contains the quotient
 	
+	li $v0,4
+	la $a0, ratio_answer
+	syscall
+	
 	li $v0, 1
 	move $a0, $t6
 	syscall
-
-	
 	j menu
 	
 	
 	
 	get_avg_lecs:
+	
+	jal count_days
+	
+	move $t6,$v0
+	# Calculate the averge: number of lecs / num of days
+	div $t0, $t6
+	mflo $t7  # answer
+	
+	
+	li $v0,4
+	la $a0, avg_answer
+	syscall
+	
+	li $v0, 1
+	move $a0, $t7
+	syscall
+	
 	j menu
 	
 	division_by_zero:
@@ -507,7 +528,28 @@ count_num_of_hours:
     	syscall
     
     	j menu
-
+    	
+    	
+count_days:
+	li $t9 ,0 
+	la $t4,file_content 	
+	count_days_loop:
+		lb $t6, ($t4)          
+        	addi $t4, $t4, 1
+        	beqz $t6, end_counting
+		beq $t6, ':', increment
+        	j count_days_loop 
+        	 
+	increment:
+	add  $t9, $t9,1
+	j count_days_loop
+	
+	end_counting:
+	move $v0, $t9
+	jr $ra
+	
+	
+	
 get_given_slot_in_given_day:
 	
 	la $a0, select_day		
