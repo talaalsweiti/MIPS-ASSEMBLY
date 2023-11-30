@@ -22,10 +22,12 @@ view_OH_num: .asciiz "\n e - View office hours number\n"
 view_meets_num: .asciiz "\n f - View meetings number\n"
 view_avg_lec: .asciiz "\n g - View the average lectures per day\n"
 view_ratio_lec_OH: .asciiz "\n h - View the ratio between total number of lectures and the total number of OH\n"
+add_new_appointemnt_sen:  .asciiz "\n i - Add new appointemnt\n"
+delete_appointemnt_sen:  .asciiz "\n j - Delete an appointemnt\n"
 quit: .asciiz "\n q - quit the program\n"
 quit_message: .asciiz "\n Thank you for using our program!!\n"
 
-select:.asciiz " \n Please choose a, b, c, d, e, f, g, h, or q: " 
+select:.asciiz " \n Please choose a, b, c, d, e, f, g, h, i, j, or q: " 
 a: .asciiz "a\n"
 b: .asciiz "b\n"
 c: .asciiz "c\n"
@@ -34,6 +36,8 @@ e: .asciiz "e\n"
 f: .asciiz "f\n"
 g: .asciiz "g\n"
 h: .asciiz "h\n"
+i: .asciiz "i\n"
+j: .asciiz "j\n"
 q: .asciiz "q\n"
 yes: .asciiz "yes\n"
 space: .asciiz " "
@@ -83,6 +87,7 @@ M: .asciiz "M"
 print_L_sen: .asciiz "\n Number of Lectures in hours: "
 print_OH_sen: .asciiz "\n Number of Office Hours in hours: "
 print_M_sen: .asciiz "\n Number of Meetings in hours: "
+div_by_zero: .asciiz "\n Error: Division by zero\n"
 
 .text
 .globl main
@@ -147,6 +152,17 @@ menu:
 	li $v0, 4
 	syscall
 	
+	la $a0,add_new_appointemnt_sen		
+	li $a1, 256
+	li $v0, 4
+	syscall
+	
+	la $a0, delete_appointemnt_sen	
+	li $a1, 256
+	li $v0, 4
+	syscall
+	
+	
 	la $a0, quit					
 	li $a1, 256
 	li $v0, 4
@@ -197,14 +213,25 @@ selection:
 	beq $v0,$zero,count_num_of_hours 
 	
 	# if the user choice g
-	#la $a1,g		
+	la $a1,g		
+	jal strcmp
+	beq $v0,$zero, count_num_of_hours 
+	
+	# if the user choice h
+	la $a1,h		
+	jal strcmp
+	beq $v0,$zero, count_num_of_hours 
+	
+	#la $a1,i		
 	#jal strcmp
 	#beq $v0,$zero, 
 	
+	
 	# if the user choice h
-	#la $a1,h		
+	#la $a1,j		
 	#jal strcmp
 	#beq $v0,$zero, 
+	
 	
 	# if the user choice q
 	la $a1,q		
@@ -394,12 +421,18 @@ count_num_of_hours:
 	jal strcmp	
 	beq $v0,$zero, print_OH
 	
-      	
-      	 	
+      
       	la $a1,f
 	jal strcmp	
 	beq $v0,$zero, print_M
 	
+	la $a1,g
+	jal strcmp	
+	beq $v0,$zero, get_avg_lecs
+	
+	la $a1,h
+	jal strcmp	
+	beq $v0,$zero, print_ratio
       	j menu
 	
 	 print_L:
@@ -446,8 +479,34 @@ count_num_of_hours:
 		la $a0, newLine
 		li $v0, 4
 		syscall
+		j menu
+	print_ratio:
+	# Check if the office hours is zero to avoid division by zero
+	beq $t2, $zero, division_by_zero
+	
+	# Calculate the ratio: t0 / t2
+	div $t0, $t2
+	mflo $t6  # t6 now contains the quotient
+	
+	li $v0, 1
+	move $a0, $t6
+	syscall
 
+	
 	j menu
+	
+	
+	
+	get_avg_lecs:
+	j menu
+	
+	division_by_zero:
+	  # Handle division by zero
+    	li $v0, 4
+    	la $a0, div_by_zero
+    	syscall
+    
+    	j menu
 
 get_given_slot_in_given_day:
 	
