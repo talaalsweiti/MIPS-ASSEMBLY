@@ -71,6 +71,11 @@ first_num: .space 10
 sec_num: .space 10
 invalid_slot: .asciiz "\n The enterd slot is not valid, please try again!"
 
+num_of_L: .space 10
+num_of_OH: .space 10
+num_of_M: .space 10
+start_time: .space 10
+end_time: .space 10
 
 .text
 .globl main
@@ -169,10 +174,10 @@ selection:
 	jal strcmp
 	beq $v0,$zero, get_given_slot_in_given_day
 	
-	# if the user choice d
-	#la $a1,d		
-	#jal strcmp
-	#beq $v0,$zero, 
+	# if the user choice to print number of lecs
+	la $a1,d		
+	jal strcmp
+	beq $v0,$zero, count_num_of_lectures
 	
 	# if the user choice e
 	#la $a1,e		
@@ -248,6 +253,58 @@ read_file:
 		move $a0, $t0      # file descriptor to close
 		syscall            # close file
 		jr $ra 
+
+
+
+count_num_of_lectures:
+	li $t0, 0
+	
+	
+	#la $t2, start_time
+	#la $t3, end_time
+	
+	la $t2, choiced_day
+	la $t4,file_content
+	la $t7,day 
+	la $t5,day_slot 	
+
+	
+	get_day_to_get_slot:
+		lb $t6, ($t4)          
+        	addi $t4, $t4, 1
+        	beq $t6, '\n', get_day_to_get_slot
+		beq $t6, ':', get_day_slot
+		beqz $t6,  menu
+		sb $t6, 0($t2)        
+        	addi $t2, $t2, 1   
+        	j get_day_to_get_slot    
+	
+	get_day_slot:
+	sb $zero, 0($t2)
+	j get_slot
+		
+	return_slot:
+	la $t5,day_slot
+		move $a0,$t5		
+		li $a1, 256
+		li $v0, 4
+		syscall
+		
+		la $a0, newLine		
+		li $a1, 256
+		li $v0, 4
+		syscall
+	
+	
+	la $t2, choiced_day
+	#la $t5,day_slot
+	
+	j get_day_to_get_slot
+	
+	
+	
+	j menu
+
 
 
 
@@ -344,9 +401,9 @@ get_given_slot_in_given_day:
 		
 		continue_process_slot:
 		
-		
 		la $t5,day_slot 
 		la $t2, current_start_time
+		
 		la $a0, day_slot 		
 		li $a1, 256
 		li $v0, 4
@@ -580,7 +637,7 @@ get_day:
         	lb $t6, ($t4)         
         	addi $t4, $t4, 1
         	beqz $t6, end_loop_0   
-        	beq $t6, '\n', end_line_0 
+        	beq $t6, '\n', loop_0
         	beq $t6, ':', process_slot 
 
         	# Process the character as part of the day number
@@ -625,6 +682,11 @@ get_day:
 		
 		beq $v0,$zero, continue_process_slot
 		
+		# If the user choiced c, returh the slot and dont print it
+		move $a0,$a3	
+		la $a1,d
+		jal strcmp
+		beq $v0,$zero,return_slot 
 		
  	    	la $a0, select_day_sentence_1
  	    	li $a1, 256
@@ -655,10 +717,6 @@ get_day:
 	
 		j enter_another_day
 		
-	end_line_0:
-        # Continue to the next line
-        	j loop_0
-
     	end_loop_0:
 		j menu 
 	
