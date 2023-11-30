@@ -5,7 +5,6 @@ buffer: .space 1024
 fin: .asciiz "D:\\MIPS-ASSEMBLY\\calenderFile.txt"
 
 
-#"D:\MIPS-ASSEMBLY\calenderFile.txt"
 #holds the file content 
 file_content: .space 1024
 newLine: .asciiz "\n"
@@ -55,22 +54,22 @@ choiced_day_input: .space 10
 choiced_day: .space 10
 day_slot :  .space 100
 line: .asciiz "\n ______________________________________________________________________ \n "
-current_num_1: .space 10
-current_num_2: .space 10
+current_start_time: .space 10
+current_end_time: .space 10
 extracted_slot: .space 100
 category: .space 5
-answer_slot: .space 100
+
 # the taken day without new line (used for comparision)
 given_day: .space 10
 given_day_input: .space 10
 
 
-enter_slot_1: .asciiz "\n Please enter the first number in the slot: "
-enter_slot_2: .asciiz "\n Please enter the second number in the slot: "
+enter_slot_1: .asciiz "\n Please enter the start time: "
+enter_slot_2: .asciiz "\n Please enter the end time: "
 given_slot: .space 20
 first_num: .space 10
 sec_num: .space 10
-invalid_slot: .asciiz "\n The enterd slot is not valid, please try again!\n"
+invalid_slot: .asciiz "\n The enterd slot is not valid, please try again!"
 
 
 .text
@@ -143,7 +142,6 @@ menu:
 	
 	
 selection:
-	#load the addrees of the string select(which define in .data section) to a0	
 	la $a0, select			
 	li $a1, 256
 	li $v0, 4
@@ -254,7 +252,6 @@ read_file:
 
 
 get_given_slot_in_given_day:
-	la $s0,answer_slot
 	
 	la $a0, select_day		
 	li $a1, 256
@@ -271,7 +268,7 @@ get_given_slot_in_given_day:
 	la $t2, choiced_day
 	jal remove_new_line
 	
-	#j menu
+	# check if the choiced day exist  
 	jal check_day
 	
 	beq $v0 ,$zero, get_slot_in_day
@@ -279,11 +276,13 @@ get_given_slot_in_given_day:
 	la $a0, day_not_exist		
 	li $v0, 4
 	syscall
-	#or j menu
+	
+	# Ask the user to enter another day
 	j get_given_slot_in_given_day
 	
 	get_slot_in_day:
-		
+	
+	# Ask the user to enter the start time	
 	la $a0, enter_slot_1		
 	li $a1, 256
 	li $v0, 4
@@ -293,12 +292,10 @@ get_given_slot_in_given_day:
 	li $v0, 5
 	syscall	
 	
+	# Save it in $t0
 	move $t0, $v0
 	
-	la $a0, newLine		
-	li $v0, 4
-	syscall
-	
+	# Ask the user to enter the end time	
 	la $a0, enter_slot_2		
 	li $a1, 256
 	li $v0, 4
@@ -307,76 +304,75 @@ get_given_slot_in_given_day:
 	li $v0, 5
 	syscall	
 	
+	# Save it $t1
 	move $t1, $v0
 
 	 		
-	# if num1 is less than or equal 5, we need to add 12 
+	# if num1 is less than or equal 5, we need to add 12 for comparsion 
 	ble $t0, 5 , add_12_num1	
-	
 	ble $t1, 5 , add_12_num2
 	
-	j find_print_slot
+	j find_and_print_slot
 			
 	add_12_num1:
     	addi $t0, $t0, 12  # Add 12 to the loaded value
-			
 					
 	ble $t1, 5 , add_12_num2								
 	    
-	j find_print_slot
+	j find_and_print_slot
 	
 	add_12_num2:
 	addi $t1, $t1, 12
 	
-	    
-	j find_print_slot
+	j find_and_print_slot
+	
 	num_not_valid:
 		la $a0, invalid_slot			
 		li $a1, 256
 		li $v0, 4
 		syscall
 		j menu
+					
 	
-				
-	
- 	find_print_slot:
+ 	find_and_print_slot:
+ 		# If the start time is greater than the end  tinme -> invalid slot
  		bgt $t0 , $t1, num_not_valid 
  		
- 		### TODO remove
- 		#move $a0,$t0
- 		#li $v0,1
- 		#syscall
- 		#la $a0,space
- 		#li $v0,4
- 		#syscall
- 		#move $a0,$t1
- 		#li $v0,1
- 		#syscall
- 		#la $a0,newLine
- 		#li $v0,4
- 		#syscall
- 		
- 		#to get this day slot
-		j print_slot
-		continue_process_slot:
-		la $t5,day_slot 
-		la $t2, current_num_1
+ 		# To get this day slot
+		j get_slot
 		
-   		loop_5:
+		
+		continue_process_slot:
+		
+		
+		la $t5,day_slot 
+		la $t2, current_start_time
+		la $a0, day_slot 		
+		li $a1, 256
+		li $v0, 4
+		syscall
+		
+		la $a0, newLine		
+		li $a1, 256
+		li $v0, 4
+		syscall
+   		loop_to_get_start_time:
+   		
         	lb $t6, ($t5)         
         	addi $t5, $t5, 1
         	beqz $t6, done_5   
         	beq $t6, '\n', done_5
+        	beq $t6, '\r', done_5
         	beq $t6, '-', process_dash
-		beq $t6, ' ', loop_5
+		beq $t6, ' ', loop_to_get_start_time
         	sb $t6, 0($t2)        
         	addi $t2, $t2, 1       
-        	j loop_5
+        	j loop_to_get_start_time
 
     		process_dash:
     		sb $zero, 0($t2)
     		 
-    		la  $a0, current_num_1
+    		la  $a0, current_start_time
    	 	jal str_to_int
 		move $t2, $v0
 		
@@ -391,22 +387,22 @@ get_given_slot_in_given_day:
 		
 		get_sec_number:
 		  	 	
-	 	la $t3, current_num_2
+	 	la $t3, current_end_time
 		
-   	 	#get the second num
-   	 	get_sec_slot:
+   	 	# get the second num
+   	 	get_end_time:
             	lb $t6, ($t5)         
         	addi $t5, $t5, 1
         	beq $t6, ' ', get_category
         	beqz $t6, get_category
         	sb $t6, 0($t3)         
         	addi $t3, $t3, 1       
-            	j    get_sec_slot
+            	j  get_end_time
    	 	
    	 	get_category:
    	 	sb $zero, 0($t3)
    	 	
-   	 	la  $a0, current_num_2
+   	 	la  $a0, current_end_time
    	 	jal str_to_int  	 
    	 	move $t3,$v0
    	 	ble $t3, 5, add_12_3
@@ -424,10 +420,11 @@ get_given_slot_in_given_day:
         	beq $t6, '\n',check_the_slots
         	beqz $t6, check_the_slots
         	beq $t6, ',', check_the_slots
+        	beq $t6, '\r', check_the_slots
         	sb $t6, 0($t4)         
         	addi $t4, $t4, 1       
         	
-            	j     get_category_loop  
+            	j    get_category_loop  
 		
 		check_the_slots:
    	 	sb $zero, 0($t4)
@@ -442,10 +439,15 @@ get_given_slot_in_given_day:
    	 	bge $t2,13, minus_12
    	 	
    	 	j print_start_time_0
+   	 	
    	 	minus_12:
    	 	subi $t2,$t2,12
    	 	
    	 	print_start_time_0:
+   	 	la $a0, space
+   	 	li $v0,4
+   	 	syscall
+   	 	
    	 	move $a0, $t2
    	 	li $v0,1
    	 	syscall
@@ -463,12 +465,16 @@ get_given_slot_in_given_day:
    	 	subi $t0,$t0,12
    	 	
    	 	print_start_time_1:
+   	 	la $a0, space
+   	 	li $v0,4
+   	 	syscall
+   	 	
    	 	move $a0, $t0
    	 	li $v0,1
    	 	syscall
    	 	
    	 	check_end_time:
-   	 	blt $t1,$t3, t1_as_end_time
+   	 	ble $t1,$t3, t1_as_end_time
    	 	   	 	
    	 	j print_result
    	 	
@@ -480,15 +486,14 @@ get_given_slot_in_given_day:
    	 	bge $t3,13,minus_12_2
    	 	j print_res
    	 	
-   	 	
    	 	minus_12_2:
    	 	subi $t3,$t3,12
    	 	
    	 	print_res:
-   		la $a0, space
+   	 	
+   		la $a0, dash
    	 	li $v0,4
    	 	syscall
-   	 	
    	 	
    	 	move $a0, $t3
    	 	li $v0,1
@@ -503,21 +508,19 @@ get_given_slot_in_given_day:
    	 	syscall
    	 	
    	 	
-   	 	la $a0, newLine
-   	 	li $v0,4
-   	 	syscall
-   	 	
-	
 		skip:
 	 	#reset
-	 	la $t2, current_num_1
-	 	la $t3, current_num_2
+	 	la $t2, current_start_time
+	 	la $t3, current_end_time
 	 	la $t4, category
 	 		
-		
-    		j loop_5
+    		j loop_to_get_start_time
     		
     		done_5:
+    		 la $t2, current_start_time
+	 	la $t3, current_end_time
+	 	la $t4, category
+	 		
 		la $a1 , choiced_day
  		j menu
  
@@ -533,7 +536,8 @@ get_set_of_days:
 	syscall
 	
 	
-	# get the choice from the user
+	
+	# ask the user to enter another day if wanted
 	la $a0, another_day_answer
 	li $v0, 8
 	syscall		
@@ -541,12 +545,9 @@ get_set_of_days:
 	la $a1,yes		
 	jal strcmp
 	beq $v0,$zero, get_set_of_days
-	
-			
+		
 	j menu
 	
-
-
 
 get_day:
 	la $a0, select_day			
@@ -554,7 +555,6 @@ get_day:
 	li $v0, 4
 	syscall
 	
-	# get the choice from the user
 	la $a0, choiced_day_input
 	li $v0, 8
 	syscall
@@ -565,15 +565,14 @@ get_day:
 	
 	jal check_day
 	
-	beq $v0 ,$zero, print_slot
+	beq $v0 ,$zero, get_slot
 
 	la $a0, day_not_exist		
 	li $v0, 4
 	syscall
-	#or j menu
-	j get_day
+	j menu
 		
-	print_slot:
+	get_slot:
 		la $t4,file_content
 		la $t7,day 
 		la $t5,day_slot 	
@@ -592,12 +591,11 @@ get_day:
      process_slot:
         # Null-terminate the day buffer
         sb $zero, 0($t7)
+       
 	la $a1, choiced_day
 	la $a0,day
 	jal strcmp
-
 	
-	# day is found
 	beq $v0,$zero, copy_slot
         
         # Reset the day buffer for the next line
@@ -619,10 +617,12 @@ get_day:
             j copy_slot
             
  	slot_found: 
- 	    	#print slot 
+ 	    	 sb $zero, 0($t5)
+ 	    	# If the user choiced c, returh the slot and dont print it 
  	    	move $a0,$a3	
 		la $a1,c
 		jal strcmp
+		
 		beq $v0,$zero, continue_process_slot
 		
 		
@@ -630,6 +630,7 @@ get_day:
  	    	li $a1, 256
 		li $v0, 4
 		syscall
+		
 		la $a0,choiced_day
 		li $a1, 256
 		li $v0, 4
@@ -637,6 +638,7 @@ get_day:
 		la $a0,newLine
 		li $v0, 4
 		syscall
+		
  	    	la $a0, day_slot
  	    	li $a1, 256
 		li $v0, 4
@@ -663,11 +665,7 @@ get_day:
 check_day:
 	move  $s0, $ra  
 	
-	la $a0,file_content
-	li $v0, 4
-	syscall
-	
-	move $t4,$a0
+	la $t4,file_content	
 	la $t7,day 	
    loop:
         lb $t6, ($t4)         # Load the byte at the current address in $t4
@@ -788,7 +786,6 @@ str_to_int:
     done_3:
         jr $ra             # Return with the result in $v0
 
-
     
 exit:
 	la $a0, quit_message
@@ -798,5 +795,4 @@ exit:
 
 	li $v0, 10
 	syscall	
-
 
