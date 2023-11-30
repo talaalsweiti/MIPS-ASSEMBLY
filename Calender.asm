@@ -77,6 +77,13 @@ num_of_M: .space 10
 start_time: .space 10
 end_time: .space 10
 
+L: .asciiz "L"
+OH: .asciiz "OH"
+M: .asciiz "M"
+print_L_sen: .asciiz "\n Number of Lectures in hours: "
+print_OH_sen: .asciiz "\n Number of Office Hours in hours: "
+print_M_sen: .asciiz "\n Number of Meetings in hours: "
+
 .text
 .globl main
 
@@ -177,17 +184,17 @@ selection:
 	# if the user choice to print number of lecs
 	la $a1,d		
 	jal strcmp
-	beq $v0,$zero, count_num_of_lectures
+	beq $v0,$zero, count_num_of_hours
 	
-	# if the user choice e
-	#la $a1,e		
-	#jal strcmp
-	#beq $v0,$zero, 
+	#if the user choice e
+	la $a1,e		
+	jal strcmp
+	beq $v0,$zero, count_num_of_hours
 	
 	# if the user choice f
-	#la $a1,f		
-	#jal strcmp
-	#beq $v0,$zero, 
+	la $a1,f		
+	jal strcmp
+	beq $v0,$zero,count_num_of_hours 
 	
 	# if the user choice g
 	#la $a1,g		
@@ -256,57 +263,191 @@ read_file:
 
 
 
-count_num_of_lectures:
-	li $t0, 0
+count_num_of_hours:
+	li $t0, 0 #to srore lectures
+	li $t1, 0 # to store meetings
+	li $t2, 0 # to store OH
 	
-	
-	#la $t2, start_time
-	#la $t3, end_time
-	
-	la $t2, choiced_day
 	la $t4,file_content
-	la $t7,day 
-	la $t5,day_slot 	
-
 	
-	get_day_to_get_slot:
+	 	
+	get_start_time_from_file:
 		lb $t6, ($t4)          
         	addi $t4, $t4, 1
-        	beq $t6, '\n', get_day_to_get_slot
-		beq $t6, ':', get_day_slot
-		beqz $t6,  menu
-		sb $t6, 0($t2)        
-        	addi $t2, $t2, 1   
-        	j get_day_to_get_slot    
+        	beqz $t6, end_adding
+        	beq $t6, '\r', get_start_time_from_file
+        	beq $t6, '\n', get_start_time_from_file
+		beq $t6, ':', store_start_time
+		beq $t6, ' ', store_start_time
+        	j get_start_time_from_file  
+        	 
+	store_start_time:
+	la $t9, current_start_time
+       
+       start_time_loop:
+       		lb $t6, ($t4)          
+        	addi $t4, $t4, 1
+        	beqz $t6, end_adding
+        	beq $t6, '-', start_time_done
+		beq $t6, ' ', start_time_loop
+		sb $t6, 0($t9)        
+        	addi $t9, $t9, 1   
+       
+      j start_time_loop
+      
+      
+      start_time_done:
+      	sb $zero, 0($t9)
+      	
+      	la $t5,current_end_time
+      	
+      	end_time_loop:
+       		lb $t6, ($t4)          
+        	addi $t4, $t4, 1
+        	beqz $t6, end_adding
+		beq $t6, ' ', end_time_done
+		sb $t6, 0($t5)        
+        	addi $t5, $t5, 1   
+       
+      j end_time_loop
+      	
+      	end_time_done:
+      	sb $zero, 0($t5)
+      	
+      	la $t7,category
+      	catagory_loop_10:
+      		lb $t6, ($t4)          
+        	addi $t4, $t4, 1
+        	beqz $t6, catagory_loop_10_done
+        	beq $t6, ',', catagory_loop_10_done
+        	beq $t6, '\n', catagory_loop_10_done
+        	beq $t6, '\r', catagory_loop_10_done
+		beq $t6, ' ', catagory_loop_10
+		sb $t6, 0($t7)        
+        	addi $t7, $t7, 1
+      	j catagory_loop_10
+      	
+      	catagory_loop_10_done:
+      	sb $zero, 0($t7)
+      	  	
+      	
+   	 la  $a0, current_start_time
+   	 jal str_to_int  
+   	 move $t9,$v0
+   	 
+   	 la  $a0, current_end_time
+   	 jal str_to_int  	 
+   	 move $t5,$v0
+   	 
+   	 ble $t9, 5, add_12_to_start_time
+   	 ble $t5, 5, add_12_to_end_time
+   	 
+   	 
+   	 add_results:
+   	 
+   	 sub $t5, $t5, $t9
+   	 
+   	 la $a0,category
+   	 la $a1,L
+   	jal  strcmp
+   	 beq $v0,$zero, add_lectures
+   	 
+   	 la $a0,category
+   	 la $a1,OH
+   	 jal  strcmp
+   	 beq $v0,$zero, add_OH
+   	 
+   	 
+   	 # add meetings
+   	add $t1, $t1, $t5
+   	 
+   	 j get_start_time_from_file
+   	 
+   	 add_12_to_start_time:
+   	 addi $t9, $t9, 12
+   	 ble $t5, 5, add_12_to_end_time
+         j add_results  	
+         
+         
+        add_12_to_end_time:
+   	 addi $t5, $t5, 12
+         j add_results  	
+           	
+        add_lectures:
+         add $t0, $t0, $t5
+         j get_start_time_from_file
+           	
+         add_OH:  
+         add $t2, $t2, $t5
+         j get_start_time_from_file
+           	
+           
+      	end_adding:
+      	move $a0,$a3
+      	
+      	la $a1,d
+	jal strcmp	
+	beq $v0,$zero, print_L
 	
-	get_day_slot:
-	sb $zero, 0($t2)
-	j get_slot
-		
-	return_slot:
-	la $t5,day_slot
-		move $a0,$t5		
-		li $a1, 256
+	 	
+      	la $a1,e
+	jal strcmp	
+	beq $v0,$zero, print_OH
+	
+      	
+      	 	
+      	la $a1,f
+	jal strcmp	
+	beq $v0,$zero, print_M
+	
+      	j menu
+	
+	 print_L:
+	 	la $a0, print_L_sen
+ 	    	li $a1, 256
 		li $v0, 4
 		syscall
 		
-		la $a0, newLine		
-		li $a1, 256
+		move $a0, $t0
+		li $v0, 1
+		syscall
+		
+		la $a0, newLine
 		li $v0, 4
 		syscall
+		
+	 
+	 j menu
 	
-	
-	la $t2, choiced_day
-	#la $t5,day_slot
-	
-	j get_day_to_get_slot
-	
-	
-	
+	print_OH:
+		la $a0, print_OH_sen
+ 	    	li $a1, 256
+		li $v0, 4
+		syscall
+		
+		move $a0, $t2
+		li $v0, 1
+		syscall
+		
+		la $a0, newLine
+		li $v0, 4
+		syscall
 	j menu
+	print_M:
+		la $a0, print_M_sen
+ 	    	li $a1, 256
+		li $v0, 4
+		syscall
+		
+		move $a0, $t1
+		li $v0, 1
+		syscall
+		
+		la $a0, newLine
+		li $v0, 4
+		syscall
 
-
-
+	j menu
 
 get_given_slot_in_given_day:
 	
@@ -404,6 +545,7 @@ get_given_slot_in_given_day:
 		la $t5,day_slot 
 		la $t2, current_start_time
 		
+		# TODO remove
 		la $a0, day_slot 		
 		li $a1, 256
 		li $v0, 4
@@ -413,8 +555,8 @@ get_given_slot_in_given_day:
 		li $a1, 256
 		li $v0, 4
 		syscall
+		
    		loop_to_get_start_time:
-   		
         	lb $t6, ($t5)         
         	addi $t5, $t5, 1
         	beqz $t6, done_5   
@@ -432,9 +574,7 @@ get_given_slot_in_given_day:
     		la  $a0, current_start_time
    	 	jal str_to_int
 		move $t2, $v0
-		
 		ble $t2, 5, add_12_1
-		
 		j get_sec_number
 		
 		add_12_1:
@@ -484,7 +624,7 @@ get_given_slot_in_given_day:
             	j    get_category_loop  
 		
 		check_the_slots:
-   	 	sb $zero, 0($t4)
+   	 	sb $zero, 0($t4)	
    	 	
    	 	#branch if t0 is greater than or equal t2
    	 	bge $t0,$t2, check_second_slot
@@ -682,11 +822,7 @@ get_day:
 		
 		beq $v0,$zero, continue_process_slot
 		
-		# If the user choiced c, returh the slot and dont print it
-		move $a0,$a3	
-		la $a1,d
-		jal strcmp
-		beq $v0,$zero,return_slot 
+		
 		
  	    	la $a0, select_day_sentence_1
  	    	li $a1, 256
@@ -829,14 +965,14 @@ continue:
 	
 str_to_int:
     li $v0, 0            # Initialize result to 0
-    li $t4, 10           # Set divisor to 10 for decimal digits
+    #li $t4, 10           # Set divisor to 10 for decimal digits
 
     loop_3:
         lb $t3, 0($a0)    # Load the current character from the string
         beq $t3, $zero, done_3  # If the character is null (end of string), exit the loop
 
         sub $t3, $t3, '0'  # Convert ASCII character to numerical value
-        mul $v0, $v0, $t4  # Multiply the current result by the divisor
+        mul $v0, $v0, 10  # Multiply the current result by the divisor
         add $v0, $v0, $t3  # Add the numerical value of the current digit
         addi $a0, $a0, 1   # Move to the next character in the string
         j loop_3          # Repeat the loop
