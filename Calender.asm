@@ -90,7 +90,8 @@ print_M_sen: .asciiz "\n Number of Meetings in hours: "
 div_by_zero: .asciiz "\n Error: Division by zero\n"
 ratio_answer: .asciiz "\n The ratio: "
 avg_answer: .asciiz "\n The average lectures per day: "
-
+view_slots_to_delete_sen: .asciiz "\n The slots for this day are shown below, please choose one of these slots with it's type: \n"
+enter_type: .asciiz "\n Please enter the slot type: "
 .text
 .globl main
 
@@ -180,6 +181,7 @@ selection:
 	# get the choice from the user
 	la $a0, choice
 	la $a3,choice
+	
 	li $v0, 8
 	syscall
 	
@@ -229,10 +231,10 @@ selection:
 	#beq $v0,$zero, 
 	
 	
-	# if the user choice h
-	#la $a1,j		
-	#jal strcmp
-	#beq $v0,$zero, 
+	# if th
+	la $a1,j		
+	jal strcmp
+	beq $v0,$zero, delete_appointemnt 
 	
 	
 	# if the user choice q
@@ -290,6 +292,104 @@ read_file:
 		syscall            # close file
 		jr $ra 
 
+
+# TODO remember to clear  choiced_day register
+delete_appointemnt:
+	la $a0, select_day		
+	li $a1, 256
+	li $v0, 4
+	syscall
+	
+	# get the choice from the user
+	la $a0, given_day_input
+	li $v0, 8
+	syscall		
+	
+	
+	la $t3, given_day_input
+	la $t2, choiced_day
+	jal remove_new_line
+	
+	# check if the choiced day exist  
+	jal check_day
+	
+	beq $v0 ,$zero, ask_user_to_enter_slot
+
+	la $a0, day_not_exist		
+	li $v0, 4
+	syscall
+	
+	# Ask the user to enter another day
+	j delete_appointemnt
+	
+	ask_user_to_enter_slot:
+	
+	# To get this day slot
+	j get_slot
+		
+		
+	print_this_day_slots:
+		
+	la $t5,day_slot 
+			
+	la $a0, view_slots_to_delete_sen		
+	li $a1, 256
+	li $v0, 4
+	syscall
+	
+	la $a0, day_slot 		
+	li $a1, 256
+	li $v0, 4
+	syscall
+		
+	la $a0, newLine		
+	li $a1, 256
+	li $v0, 4
+	syscall
+	
+		
+	# Ask the user to enter the start time	
+	la $a0, enter_slot_1		
+	li $a1, 256
+	li $v0, 4
+	syscall
+	
+	li $v0, 5
+	syscall	
+	
+	# Save it in $t0
+	move $t0, $v0
+	
+	# Ask the user to enter the end time	
+	la $a0, enter_slot_2		
+	li $a1, 256
+	li $v0, 4
+	syscall
+	
+	li $v0, 5
+	syscall	
+	
+	# Save it $t1
+	move $t1, $v0
+	
+	
+	# Ask the user to enter the type
+	la $a0, enter_type		
+	li $a1, 256
+	li $v0, 4
+	syscall
+	
+	# get the choice from the user
+	la $a0, category
+	
+	li $v0, 8
+	syscall
+	
+	
+	
+	
+	
+	j menu
 
 
 count_num_of_hours:
@@ -378,7 +478,7 @@ count_num_of_hours:
    	 
    	 la $a0,category
    	 la $a1,L
-   	jal  strcmp
+   	 jal  strcmp
    	 beq $v0,$zero, add_lectures
    	 
    	 la $a0,category
@@ -919,11 +1019,13 @@ get_day:
  	    	# If the user choiced c, returh the slot and dont print it 
  	    	move $a0,$a3	
 		la $a1,c
-		jal strcmp
-		
+		jal strcmp		
 		beq $v0,$zero, continue_process_slot
 		
-		
+		move $a0,$a3
+		la $a1, j
+		jal strcmp
+		beq $v0,$zero,print_this_day_slots
 		
  	    	la $a0, select_day_sentence_1
  	    	li $a1, 256
@@ -955,6 +1057,7 @@ get_day:
 		j enter_another_day
 		
     	end_loop_0:
+    	
 		j menu 
 	
 check_day:
