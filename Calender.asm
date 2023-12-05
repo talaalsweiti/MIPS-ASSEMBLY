@@ -41,46 +41,46 @@ j: .asciiz "j\n"
 q: .asciiz "q\n"
 yes: .asciiz "yes\n"
 space: .asciiz " "
-choice: .space 10
+choice: .space 100
 
 error: .asciiz "\n Invalid input, try again\n"
 day_not_exist: .asciiz "\n Day not exist, try again\n"
 select_day:.asciiz " \n Please choose a day: "  
 select_day_sentence_1:.asciiz " \n The slots for day "
 another_day_q: .asciiz "\n Enter yes to enter another day, or any character to returb to menu: "
-another_day_answer : .space 10
-day: .space 10
+another_day_answer : .space 100
+day: .space 100
 
 # to take the day input from the user
-choiced_day_input: .space 10
+choiced_day_input: .space 100
 
 # the taken day without new line (used for comparision)
-choiced_day: .space 10
+choiced_day: .space 100
 day_slot :  .space 100
 line: .asciiz "\n ______________________________________________________________________ \n "
-current_start_time: .space 10
-current_end_time: .space 10
+current_start_time: .space 100
+current_end_time: .space 100
 extracted_slot: .space 100
-category: .space 5
-slot_type: .space 5
+category: .space 100
+slot_type: .space 100
 
 # the taken day without new line (used for comparision)
-given_day: .space 10
-given_day_input: .space 10
+given_day: .space 100
+given_day_input: .space 100
 
 
 enter_slot_1: .asciiz "\n Please enter the start time: "
 enter_slot_2: .asciiz "\n Please enter the end time: "
-given_slot: .space 20
-first_num: .space 10
-sec_num: .space 10
+given_slot: .space 100
+first_num: .space 100
+sec_num: .space 100
 invalid_slot: .asciiz "\n The enterd slot is not valid, please try again!"
 
-num_of_L: .space 10
-num_of_OH: .space 10
-num_of_M: .space 10
-start_time: .space 10
-end_time: .space 10
+num_of_L: .space 100
+num_of_OH: .space 100
+num_of_M: .space 100
+start_time: .space 100
+end_time: .space 100
 
 L: .asciiz "L"
 OH: .asciiz "OH"
@@ -97,6 +97,11 @@ flag:   .word 0
 slot_after_delete: .space 100
 temp_slot: .space 100
 
+start_time_to_delete: .space 100
+end_time_to_delete: .space 100
+temp: .space 100
+temp_2: .space 100
+temp_3: .space 100
 .text
 .globl main
 
@@ -186,7 +191,7 @@ selection:
 	# get the choice from the user
 	la $a0, choice
 	la $a3,choice
-	
+	la $a1, 10
 	li $v0, 8
 	syscall
 	
@@ -311,13 +316,15 @@ delete_appointemnt:
 	
 	# get the choice from the user
 	la $a0, given_day_input
+	la $a1, 10
 	li $v0, 8
 	syscall		
 	
 	
-	la $t3, given_day_input
-	la $t2, choiced_day
+	la $a0, given_day_input
+	la $v0, choiced_day
 	jal remove_new_line
+	move $t2, $v0
 	
 	# check if the choiced day exist  
 	jal check_day
@@ -362,10 +369,15 @@ delete_appointemnt:
 	li $v0, 4
 	syscall
 	
-	li $v0, 5
+	la $a0,start_time_to_delete
+	la $a1, 10
+	li $v0, 8
 	syscall	
 	
-	# Save it in $t0
+
+	la $a0,start_time_to_delete
+	la $v0, temp
+	jal remove_new_line
 	move $t0, $v0
 	
 	# Ask the user to enter the end time	
@@ -374,12 +386,16 @@ delete_appointemnt:
 	li $v0, 4
 	syscall
 	
-	li $v0, 5
+	la $a0, end_time_to_delete
+	la $a1, 10
+	li $v0, 8
 	syscall	
 	
-	# Save it $t1
-	move $t1, $v0
 	
+	la $a0, end_time_to_delete
+	la $v0,temp_2
+	jal remove_new_line
+	move $t1, $v0
 	
 	# Ask the user to enter the slot type type
 	la $a0, enter_type		
@@ -389,9 +405,14 @@ delete_appointemnt:
 	
 	
 	la $a0, slot_type
+	la $a1, 10
 	li $v0, 8
 	syscall
 	
+
+	la $a0,slot_type
+	la $v0,temp_3
+	jal remove_new_line
 	move $t3, $v0
 	
 	# copy the day slots 
@@ -735,9 +756,10 @@ get_given_slot_in_given_day:
 	syscall		
 	
 	
-	la $t3, given_day_input
-	la $t2, choiced_day
+	la $a0, given_day_input
+	la $v0, choiced_day
 	jal remove_new_line
+	move $t2,$v0
 	
 	# check if the choiced day exist  
 	jal check_day
@@ -1008,6 +1030,7 @@ get_set_of_days:
 	
 	# ask the user to enter another day if wanted
 	la $a0, another_day_answer
+	la $a1, 10
 	li $v0, 8
 	syscall		
 
@@ -1025,12 +1048,14 @@ get_day:
 	syscall
 	
 	la $a0, choiced_day_input
+	la $a1, 10
 	li $v0, 8
 	syscall
 	
-	la $t3, choiced_day_input
-	la $t2, choiced_day
+	la $a0, choiced_day_input
+	la $v0, choiced_day
 	jal remove_new_line
+	move $t2,$v0
 	
 	jal check_day
 	
@@ -1225,23 +1250,28 @@ strcmp:
 	
 
 remove_new_line:
-	
-	loop_new_line:
-        lb $t6, ($t3)         
-        addi $t3, $t3, 1
-        beqz $t6, continue 
-        beq $t6, '\n', continue  
-	sb $t6, 0($t2)         
-	addi $t2, $t2, 1       
-	j loop_new_line
-continue:
-	sb $zero, 0($t2)
-	jr $ra
+   
+    
+    loop_new_line:
+        lb $s0, 0($a0)
+        beqz $s0,continue
+        beq $s0, '\0', continue  # Check for null terminator
+        beq $s0, '\n', skip_newline  # Skip newline characters
+        sb $s0, 0($v0)
+        addi $v0, $v0, 1  # Move to the next position in the destination buffer
+
+    skip_newline:
+        addi $a0, $a0, 1  # Move to the next character in the source buffer
+        j loop_new_line  # Continue the loop
+
+    continue:
+        sb $zero, 0($v0)  # Null-terminate the modified string
+        jr $ra
+
 	
 str_to_int:
     li $v0, 0            # Initialize result to 0
-    #li $t4, 10           # Set divisor to 10 for decimal digits
-
+    
     loop_3:
         lb $t3, 0($a0)    # Load the current character from the string
         beq $t3, $zero, done_3  # If the character is null (end of string), exit the loop
