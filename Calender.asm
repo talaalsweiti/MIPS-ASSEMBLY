@@ -62,6 +62,7 @@ current_start_time: .space 10
 current_end_time: .space 10
 extracted_slot: .space 100
 category: .space 5
+slot_type: .space 5
 
 # the taken day without new line (used for comparision)
 given_day: .space 10
@@ -92,6 +93,10 @@ ratio_answer: .asciiz "\n The ratio: "
 avg_answer: .asciiz "\n The average lectures per day: "
 view_slots_to_delete_sen: .asciiz "\n The slots for this day are shown below, please choose one of these slots with it's type: \n"
 enter_type: .asciiz "\n Please enter the slot type: "
+flag:   .word 0
+slot_after_delete: .space 100
+temp_slot: .space 100
+
 .text
 .globl main
 
@@ -295,6 +300,10 @@ read_file:
 
 # TODO remember to clear  choiced_day register
 delete_appointemnt:
+ 	# Set the flag to 0
+    	li $t0,0          
+    	sw $t0, flag     
+
 	la $a0, select_day		
 	li $a1, 256
 	li $v0, 4
@@ -327,8 +336,7 @@ delete_appointemnt:
 	# To get this day slot
 	j get_slot
 		
-		
-	print_this_day_slots:
+	 back_to_get_deleted_slots:
 		
 	la $t5,day_slot 
 			
@@ -373,21 +381,85 @@ delete_appointemnt:
 	move $t1, $v0
 	
 	
-	# Ask the user to enter the type
+	# Ask the user to enter the slot type type
 	la $a0, enter_type		
 	li $a1, 256
 	li $v0, 4
 	syscall
 	
-	# get the choice from the user
-	la $a0, category
 	
+	la $a0, slot_type
 	li $v0, 8
 	syscall
 	
+	move $t3, $v0
+	
+	# copy the day slots 
+	move $t7, $t5
+	
+	la $t6,slot_after_delete 
+	
+	check_if_slot_exist:
+		lb $t4, ($t5)          
+        	addi $t5, $t5, 1
+        	beq $t4, $t0, check_end_time_match
+        	beq $t4, '\n',end_delete_loop
+        	sb $t4, 0($t6)        
+        	addi $t6, $t6, 1   
+        	j check_if_slot_exist  
+        
+        # checksss
+        
+	check_end_time_match:
+		lb $t4, ($t5)          
+        	addi $t5, $t5, 1
+        	beq $t4, '-',check_end_time_match
+        	beq $t4, ' ',check_end_time_match
+        	beq $t4, $t1, check_category_match
+        	# if the end time is not eqaul return to checking the whole slot  
+		j check_if_slot_exist
+	
+	check_category_match:
 	
 	
+	j check_category_match
+		lb $t4, ($t5)          
+        	addi $t5, $t5, 1
+        	beq $t4, ' ',check_category_match
+        	beq $t4, $t3, slot_to_delete
+        	j remove_comma
+    	
+    	remove_comma:
+    		lb $t4, ($t5)          
+        	addi $t5, $t5, 1
+        	beq $t4, ',',check_if_slot_exist
+        	beq $t4, '\n',end_delete_loop
+    		beqz $t4, end_delete_loop
+        j remove_comma
+        
+        slot_to_delete:
+        # set flg to one 
+        li $t0,1         
+    	sw $t0, flag 
+        j check_if_slot_exist
+        
+	end_delete_loop:
+	 # Check the flag
+    	lw $t1, flag     
+    	beq $t1, 1, print_with_delete   # Branch if equal to 1 (flag is set)
 	
+	move $a0, $t7	
+	li $a1, 256
+	li $v0, 4
+	syscall
+	
+	j menu
+	
+	print_with_delete:
+	la $a0, slot_after_delete 		
+	li $a1, 256
+	li $v0, 4
+	syscall
 	
 	j menu
 
@@ -686,7 +758,6 @@ get_given_slot_in_given_day:
 	li $a1, 256
 	li $v0, 4
 	syscall
-	
 
 	li $v0, 5
 	syscall	
@@ -1025,7 +1096,7 @@ get_day:
 		move $a0,$a3
 		la $a1, j
 		jal strcmp
-		beq $v0,$zero,print_this_day_slots
+		beq $v0,$zero, back_to_get_deleted_slots
 		
  	    	la $a0, select_day_sentence_1
  	    	li $a1, 256
