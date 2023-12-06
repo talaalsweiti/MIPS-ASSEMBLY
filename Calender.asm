@@ -102,6 +102,10 @@ end_time_to_delete: .space 100
 temp: .space 100
 temp_2: .space 100
 temp_3: .space 100
+temp_start: .space 100
+temp_end: .space 100
+temp_category: .space 100
+
 .text
 .globl main
 
@@ -306,8 +310,8 @@ read_file:
 # TODO remember to clear  choiced_day register
 delete_appointemnt:
  	# Set the flag to 0
-    	li $t0,0          
-    	sw $t0, flag     
+    	li $t4,0          
+    	sw $t4, flag     
 
 	la $a0, select_day		
 	li $a1, 256
@@ -324,7 +328,7 @@ delete_appointemnt:
 	la $a0, given_day_input
 	la $v0, choiced_day
 	jal remove_new_line
-	move $t2, $v0
+	la $t2, choiced_day
 	
 	# check if the choiced day exist  
 	jal check_day
@@ -369,16 +373,16 @@ delete_appointemnt:
 	li $v0, 4
 	syscall
 	
-	la $a0,start_time_to_delete
+	la $a0,temp
 	la $a1, 10
 	li $v0, 8
 	syscall	
 	
 
-	la $a0,start_time_to_delete
-	la $v0, temp
+	la $a0,temp
+	la $v0, start_time_to_delete
 	jal remove_new_line
-	move $t0, $v0
+	la $t0, start_time_to_delete
 	
 	# Ask the user to enter the end time	
 	la $a0, enter_slot_2		
@@ -386,16 +390,16 @@ delete_appointemnt:
 	li $v0, 4
 	syscall
 	
-	la $a0, end_time_to_delete
+	la $a0, temp_2
 	la $a1, 10
 	li $v0, 8
 	syscall	
 	
 	
-	la $a0, end_time_to_delete
-	la $v0,temp_2
+	la $a0, temp_2
+	la $v0,end_time_to_delete
 	jal remove_new_line
-	move $t1, $v0
+	la $t1, end_time_to_delete
 	
 	# Ask the user to enter the slot type type
 	la $a0, enter_type		
@@ -404,83 +408,127 @@ delete_appointemnt:
 	syscall
 	
 	
-	la $a0, slot_type
+	la $a0,temp_3
 	la $a1, 10
 	li $v0, 8
 	syscall
 	
 
-	la $a0,slot_type
-	la $v0,temp_3
+	la $a0,temp_3
+	la $v0,slot_type
 	jal remove_new_line
-	move $t3, $v0
+	la $t3,slot_type
 	
-	# copy the day slots 
-	move $t7, $t5
-	
+
 	la $t6,slot_after_delete 
+	la $t7, temp_start
+	move $s1,$t5
+	move $s2,$t5
+	get_start_time_to_comapre:
+		lb $t4, ($s2)       
+        	addi $s2, $s2, 1
+        	beqz $t4, end_delete_loop
+        	beq $t4, '\r', end_delete_loop
+        	beq $t4, '\n', end_delete_loop
+        	beq $t4, '-', start_time_found_
+        	beq $t4, ' ', get_start_time_to_comapre
+        	addi $s1, $s1, 1
+        	sb $t4, 0($t7)
+        	addi $t7, $t7, 1  
+        	j get_start_time_to_comapre 
+ 
+	start_time_found_:
+		sb $zero, 0($t7)
+		move $a1,$t0
+		move $a0,$t7
+		jal strcmp 
+		
+		# need to reset temp_start
+		move $t7,$s2
+		la $t7, temp_start
+		# the problem is the content of t7 is not cleared
+		# try to print t7 and delete save this slot
+		
+		la $a0,  temp_start
+		li $a1, 256
+		li $v0, 4
+		syscall
 	
-	check_if_slot_exist:
-		lb $t4, ($t5)          
-        	addi $t5, $t5, 1
-        	beq $t4, $t0, check_end_time_match
-        	beq $t4, '\n',end_delete_loop
-        	sb $t4, 0($t6)        
-        	addi $t6, $t6, 1   
-        	j check_if_slot_exist  
-        
-        # checksss
-        
-	check_end_time_match:
-		lb $t4, ($t5)          
-        	addi $t5, $t5, 1
-        	beq $t4, '-',check_end_time_match
-        	beq $t4, ' ',check_end_time_match
-        	beq $t4, $t1, check_category_match
-        	# if the end time is not eqaul return to checking the whole slot  
-		j check_if_slot_exist
+		la $a0, space
+		li $a1, 256
+		li $v0, 4
+		syscall
+		
+		beq $v0,$zero, go_check_end_time
+		
+		save_this_slot:
+		lb $t4, ($s1)
+		addi $s1, $s1, 1
+		sb $t4, 0($t6)        
+        	addi $t6, $t6, 1 
+		beq $t4, ',', get_start_time_to_comapre
+		beqz $t4, end_delete_loop
+        	beq $t4, '\r', end_delete_loop
+        	beq $t4, '\n', end_delete_loop
+        	
+        	j save_this_slot
+		
 	
-	check_category_match:
+	go_check_end_time:
+	la $t8, temp_end
 	
+	get_end_time_:
+	 	lb $t4, ($t5)         
+        	addi $t5, $t5, 1
+        	beq $t4, ' ', end_time_found
+        	beqz $t4,  end_time_found
+        	sb $t4, 0($t8)         
+        	addi $t8, $t8, 1
+        	j get_end_time_
+		
 	
-	j check_category_match
-		lb $t4, ($t5)          
+	 end_time_found:
+	 	sb $zero, 0($t8)
+	 	
+	 			
+		move $a1,$t8
+		move $a0,$t1
+		jal strcmp 
+		la $t8, temp_end
+		beq $v0,$zero, go_check_categ
+		j save_this_slot
+	
+	go_check_categ:
+		la $t9, temp_category
+		
+	check_categ_loop:
+		lb $t4, ($t5)         
         	addi $t5, $t5, 1
-        	beq $t4, ' ',check_category_match
-        	beq $t4, $t3, slot_to_delete
-        	j remove_comma
-    	
-    	remove_comma:
-    		lb $t4, ($t5)          
-        	addi $t5, $t5, 1
-        	beq $t4, ',',check_if_slot_exist
-        	beq $t4, '\n',end_delete_loop
-    		beqz $t4, end_delete_loop
-        j remove_comma
-        
-        slot_to_delete:
-        # set flg to one 
-        li $t0,1         
-    	sw $t0, flag 
-        j check_if_slot_exist
-        
+        	beq $t4, '\n',check_the_slots_to_delete
+        	beqz $t4, check_the_slots_to_delete
+        	beq $t4, ',', check_the_slots_to_delete
+        	beq $t4, '\r', check_the_slots_to_delete
+        	sb $t4, 0($t9)         
+        	addi $t9, $t9, 1    	
+	j check_categ_loop
+	
+	check_the_slots_to_delete:
+		sb $zero, 0($t9)
+		move $a1,$t9
+		move $a0,$t3
+		jal strcmp 
+		la $t9, temp_category
+		beq $v0,$zero, get_start_time_to_comapre
+		j save_this_slot
+			
+	
 	end_delete_loop:
 	 # Check the flag
-    	lw $t1, flag     
-    	beq $t1, 1, print_with_delete   # Branch if equal to 1 (flag is set)
-	
-	move $a0, $t7	
-	li $a1, 256
-	li $v0, 4
-	syscall
-	
-	j menu
-	
-	print_with_delete:
-	la $a0, slot_after_delete 		
-	li $a1, 256
-	li $v0, 4
-	syscall
+    
+	#la $a0, slot_after_delete 	
+	#li $a1, 256
+	#li $v0, 4
+	#syscall
 	
 	j menu
 
@@ -742,30 +790,35 @@ count_days:
 	jr $ra
 	
 	
-	
+# This function prints the slots that are in the range of user input slot 	
 get_given_slot_in_given_day:
-	
+	# Print a sentence to ask the user to enter a day
 	la $a0, select_day		
 	li $a1, 256
 	li $v0, 4
 	syscall
 	
-	# get the choice from the user
+	# Get the enterd day from the user
 	la $a0, given_day_input
+	li $a1, 10
 	li $v0, 8
 	syscall		
 	
-	
+	# Remove the null terminater/new line from the input 
 	la $a0, given_day_input
 	la $v0, choiced_day
 	jal remove_new_line
-	move $t2,$v0
 	
-	# check if the choiced day exist  
+	# Move the input to $t2
+	la $t2,choiced_day
+	
+	# Check if the choiced day exist  
 	jal check_day
 	
+	# If the day exist, branch to get slot 
 	beq $v0 ,$zero, get_slot_in_day
 
+	# TODO : return to menu ? 
 	la $a0, day_not_exist		
 	li $v0, 4
 	syscall
@@ -796,18 +849,18 @@ get_given_slot_in_given_day:
 	li $v0, 5
 	syscall	
 	
-	# Save it $t1
+	# Save end time $t1
 	move $t1, $v0
 
 	 		
-	# if num1 is less than or equal 5, we need to add 12 for comparsion 
+	# if start time or end time are less than or equal 5, we need to add 12 for comparsion 
 	ble $t0, 5 , add_12_num1	
 	ble $t1, 5 , add_12_num2
 	
 	j find_and_print_slot
 			
 	add_12_num1:
-    	addi $t0, $t0, 12  # Add 12 to the loaded value
+    	addi $t0, $t0, 12  
 					
 	ble $t1, 5 , add_12_num2								
 	    
@@ -817,6 +870,7 @@ get_given_slot_in_given_day:
 	addi $t1, $t1, 12
 	
 	j find_and_print_slot
+	
 	
 	num_not_valid:
 		la $a0, invalid_slot			
@@ -850,6 +904,7 @@ get_given_slot_in_given_day:
 		li $v0, 4
 		syscall
 		
+		# Exctract the start time to compare it with the given start time
    		loop_to_get_start_time:
         	lb $t6, ($t5)         
         	addi $t5, $t5, 1
@@ -869,18 +924,18 @@ get_given_slot_in_given_day:
    	 	jal str_to_int
 		move $t2, $v0
 		ble $t2, 5, add_12_1
+		
 		j get_sec_number
 		
 		add_12_1:
 		addi $t2, $t2, 12
 		
 		
-		
 		get_sec_number:
 		  	 	
 	 	la $t3, current_end_time
 		
-   	 	# get the second num
+   	 	# get the end time to compare it 
    	 	get_end_time:
             	lb $t6, ($t5)         
         	addi $t5, $t5, 1
@@ -922,6 +977,7 @@ get_given_slot_in_given_day:
    	 	
    	 	#branch if t0 is greater than or equal t2
    	 	bge $t0,$t2, check_second_slot
+   	 	
    	 	
    	 	bge $t1,$t2, take_t2_as_start_slot 
    	 	j skip
@@ -1055,7 +1111,7 @@ get_day:
 	la $a0, choiced_day_input
 	la $v0, choiced_day
 	jal remove_new_line
-	move $t2,$v0
+	la $t2, choiced_day
 	
 	jal check_day
 	
@@ -1248,10 +1304,20 @@ strcmp:
 		# Exit function
 		jr $ra
 	
+reset_buffer:
+ loop_reset_buffer:
+        lb $s0, 0($a0)
+        beqz $s0,end_reset_buffer
+        beq $s0, '\0', end_reset_buffer  # Check for null terminator
+        addi $a0, $a0, 1  # Move to the next character in the source buffer
+        j loop_new_line  # Continue the loop
+
+    end_reset_buffer:
+        #sb $zero, 0($v0)  # Null-terminate the modified string
+        jr $ra
+
 
 remove_new_line:
-   
-    
     loop_new_line:
         lb $s0, 0($a0)
         beqz $s0,continue
