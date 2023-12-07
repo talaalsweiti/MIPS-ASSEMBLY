@@ -421,59 +421,70 @@ delete_appointemnt:
 	
 
 	la $t6,slot_after_delete 
+	
 	la $t7, temp_start
+	
 	move $s1,$t5
 	move $s2,$t5
+	
 	get_start_time_to_comapre:
-		lb $t4, ($s2)       
-        	addi $s2, $s2, 1
+		lb $t4, ($t5)       
+        	addi $t5, $t5, 1
         	beqz $t4, end_delete_loop
-        	beq $t4, '\r', end_delete_loop
-        	beq $t4, '\n', end_delete_loop
         	beq $t4, '-', start_time_found_
         	beq $t4, ' ', get_start_time_to_comapre
-        	addi $s1, $s1, 1
         	sb $t4, 0($t7)
         	addi $t7, $t7, 1  
         	j get_start_time_to_comapre 
  
 	start_time_found_:
 		sb $zero, 0($t7)
+		la $t7, temp_start
+	
+		
 		move $a1,$t0
 		move $a0,$t7
 		jal strcmp 
 		
-		# need to reset temp_start
-		move $t7,$s2
-		la $t7, temp_start
-		# the problem is the content of t7 is not cleared
-		# try to print t7 and delete save this slot
 		
-		la $a0,  temp_start
-		li $a1, 256
-		li $v0, 4
-		syscall
-	
-		la $a0, space
-		li $a1, 256
-		li $v0, 4
-		syscall
+		
+		move $s4,$t7
 		
 		beq $v0,$zero, go_check_end_time
 		
-		save_this_slot:
-		lb $t4, ($s1)
-		addi $s1, $s1, 1
-		sb $t4, 0($t6)        
-        	addi $t6, $t6, 1 
-		beq $t4, ',', get_start_time_to_comapre
-		beqz $t4, end_delete_loop
-        	beq $t4, '\r', end_delete_loop
-        	beq $t4, '\n', end_delete_loop
-        	
-        	j save_this_slot
 		
-	
+		save_this_slot_start_time:
+		lb $t4, ($s4)
+		addi $s4, $s4, 1
+		beqz $t4, end_saving_start_time
+        	beq $t4, '\r', end_saving_start_time
+        	beq $t4, '\n', end_saving_start_time
+		sb $t4, 0($t6)        
+        	addi $t6, $t6, 1         	
+        	j save_this_slot_start_time
+        	
+		end_saving_start_time:
+		 li  $s3, '-'  
+		 sb $s3, 0($t6)        
+        	addi $t6, $t6, 1 
+        	
+        	save_the_rest_of_slot:
+        	lb $t4, ($t5)
+		addi $t5, $t5, 1
+		beqz $t4,end_delete_loop
+        	beq $t4, '\n', end_delete_loop
+        	beq $t4, '\r', end_delete_loop
+		sb $t4, 0($t6)        
+        	addi $t6, $t6, 1   
+        	beq $t4, ',', add_space
+		j save_the_rest_of_slot
+		
+		add_space:
+		 li  $s3, ' '  
+		 sb $s3, 0($t6)        
+        	addi $t6, $t6, 1 
+        	
+		j get_start_time_to_comapre
 	go_check_end_time:
 	la $t8, temp_end
 	
@@ -489,46 +500,137 @@ delete_appointemnt:
 	
 	 end_time_found:
 	 	sb $zero, 0($t8)
+	 	la $t8, temp_end
 	 	
-	 			
 		move $a1,$t8
 		move $a0,$t1
 		jal strcmp 
-		la $t8, temp_end
+		
+		
+		move $s0,$t8
+		
+		
 		beq $v0,$zero, go_check_categ
-		j save_this_slot
+		
+		
+		
+		save_start:
+		lb $t4, ($s4)
+		addi $s4, $s4, 1
+		beqz $t4, save_dash_1
+        	beq $t4, '\r',  save_dash_1
+        	beq $t4, '\n', save_dash_1
+		sb $t4, 0($t6)        
+        	addi $t6, $t6, 1  
+		j save_start
+		
+		save_dash_1:
+		 li  $s3, '-'  
+		 sb $s3, 0($t6)        
+        	addi $t6, $t6, 1 
+        	
+		save_end:
+		lb $t4, ($s0)
+		addi $s0, $s0, 1
+		beqz $t4, end_saving_end_time
+        	beq $t4, '\r',  end_saving_end_time
+        	beq $t4, '\n', end_saving_end_time
+		sb $t4, 0($t6)        
+        	addi $t6, $t6, 1         	
+        	j save_end
+        	
+		 end_saving_end_time:
+		 li   $s3, ' ' 
+		 sb $s3, 0($t6)        
+        	addi $t6, $t6, 1 
+		j save_the_rest_of_slot
+		
+		
 	
 	go_check_categ:
 		la $t9, temp_category
 		
 	check_categ_loop:
-		lb $t4, ($t5)         
+		lb $t4, ($t5)  
+		#lb $s1,($t5)       
         	addi $t5, $t5, 1
         	beq $t4, '\n',check_the_slots_to_delete
         	beqz $t4, check_the_slots_to_delete
         	beq $t4, ',', check_the_slots_to_delete
         	beq $t4, '\r', check_the_slots_to_delete
+        	
         	sb $t4, 0($t9)         
         	addi $t9, $t9, 1    	
 	j check_categ_loop
 	
 	check_the_slots_to_delete:
 		sb $zero, 0($t9)
+		la $t9, temp_category	
+		
 		move $a1,$t9
 		move $a0,$t3
 		jal strcmp 
-		la $t9, temp_category
+		
+		move $s6,$t9
 		beq $v0,$zero, get_start_time_to_comapre
-		j save_this_slot
+		
+		
+		save_start_2:
+		lb $t4, ($s4)
+		addi $s4, $s4, 1
+		beqz $t4, save_dash_2
+        	beq $t4, '\r',  save_dash_2
+        	beq $t4, '\n', save_dash_2
+		sb $t4, 0($t6)        
+        	addi $t6, $t6, 1  
+		j save_start_2
+		
+		save_dash_2:
+		 li  $s3, '-'  
+		 sb $s3, 0($t6)        
+        	addi $t6, $t6, 1 
+        	
+		save_end_2:
+		lb $t4, ($s0)
+		addi $s0, $s0, 1
+		beqz $t4, end_saving_end_time_2
+        	beq $t4, '\r',  end_saving_end_time_2
+        	beq $t4, '\n', end_saving_end_time_2
+		sb $t4, 0($t6)        
+        	addi $t6, $t6, 1         	
+        	j save_end_2
+        	
+		 end_saving_end_time_2:
+		 li  $s3, ' ' 
+		 sb $s3, 0($t6)        
+        	addi $t6, $t6, 1 
+        	
+		save_this_slot_category:
+		lb $t4, ($s6)
+		addi $s6, $s6, 1
+		beqz $t4,end_saving_category
+		beq $t4,'\n',end_saving_category
+		beq $t4,'\r',end_saving_category
+		sb $t4, 0($t6)        
+        	addi $t6, $t6, 1         	
+        	j save_this_slot_category
+        	
+		end_saving_category:
+		 li  $s3, ',' 
+		 sb $s3, 0($t6)        
+        	addi $t6, $t6, 1 
+		j get_start_time_to_comapre
+		
+		
 			
 	
 	end_delete_loop:
 	 # Check the flag
-    
-	#la $a0, slot_after_delete 	
-	#li $a1, 256
-	#li $v0, 4
-	#syscall
+    	sb $zero, 0($t6)
+	la $a0, slot_after_delete 	
+	li $a1, 256
+	li $v0, 4
+	syscall
 	
 	j menu
 
@@ -1303,19 +1405,6 @@ strcmp:
 	done:
 		# Exit function
 		jr $ra
-	
-reset_buffer:
- loop_reset_buffer:
-        lb $s0, 0($a0)
-        beqz $s0,end_reset_buffer
-        beq $s0, '\0', end_reset_buffer  # Check for null terminator
-        addi $a0, $a0, 1  # Move to the next character in the source buffer
-        j loop_new_line  # Continue the loop
-
-    end_reset_buffer:
-        #sb $zero, 0($v0)  # Null-terminate the modified string
-        jr $ra
-
 
 remove_new_line:
     loop_new_line:
