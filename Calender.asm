@@ -1,5 +1,10 @@
 .data
 
+#Tala Alsweiti - 1191068
+# Noor Shamali - 1200016
+
+
+
 # file paths may be different from device to another
 fin: .asciiz "D:\\MIPS-ASSEMBLY\\input.txt"
 
@@ -9,6 +14,10 @@ new_buffer: .space 1024
 
 asciidigi : .space 255
 appointmentString : .space 1024
+
+
+
+
 
 
 
@@ -887,7 +896,7 @@ write_file:
  		j done_adding_
        
    ###############################################################    
-
+# This function is used to delete a specfic slot
 delete_appointemnt:
  	la $a0, select_day		
 	li $a1, 256
@@ -1284,7 +1293,7 @@ delete_appointemnt:
 	la $a3, new_buffer
 	li $s2, 0          # $s2 is the index of the buffer
       
-	#la $t4, file_content
+	
 	la $t7,day
 	
 	copy_file_content:
@@ -1350,7 +1359,7 @@ delete_appointemnt:
 		addi $a3, $a3, 1   
 	j copy_file_content
 	store_new_day:
-        	# store what in t6
+        	# store what is in t6
         	
         	 li  $s3, ' '  
 		 sb $s3, 0($a3)
@@ -1386,8 +1395,6 @@ delete_appointemnt:
         	
         
 	end_copy_loop :
-	#li $s3 , '\n'
-	#sb $s3, 0($a3)
 	addi $a3, $a3, 1
 	sb $zero, 0($a3)
 	
@@ -1426,6 +1433,7 @@ write_file_after_delete:
 			
  j menu	
 
+# to count the freqancy of each category
 count_num_of_hours:
 	li $t0, 0 #to srore lectures
 	li $t1, 0 # to store meetings
@@ -1669,7 +1677,7 @@ count_num_of_hours:
     
     	j menu
     	
-    	
+# count number of days, used for calculte average lectures    	
 count_days:
 	li $t9 ,0 
 	la $t4,file_content 	
