@@ -583,11 +583,36 @@ add_appointemnt:
           jal store_space
 
           move $s1, $t0
+          bgt $s1,10, two_digits
+          
+          
+          addi $t0, $s1, 48 
+          sb $t0, 0( $s7)       
+        addi  $s7,  $s7, 1 
+        
+        j continue_to_store_dash
+          two_digits:
           jal convertTo_Ascii
+          
+          continue_to_store_dash:
           jal store_dash
 
           move $s1, $t1
+           bgt $s1,10, two_digits_
+          
+          
+          addi $t0, $s1, 48 
+          sb $t0, 0( $s7)       
+        addi  $s7,  $s7, 1 
+        
+        j continue_to_store_dash_
+        
+          
+          
+          two_digits_:
           jal convertTo_Ascii
+          
+          continue_to_store_dash_:
           jal store_space
           jal store_type
           j append
@@ -610,6 +635,10 @@ add_appointemnt:
         addi $a0, $a0, 48       # Convert to ASCII
         sb $a0, 0($s7)
         addi $s7, $s7, 1
+        
+        
+        
+       
         jr $ra
         
         store_dash:
