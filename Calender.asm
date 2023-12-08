@@ -1,28 +1,23 @@
 .data
+
+# file paths may be different from device to another
+fin: .asciiz "D:\\MIPS-ASSEMBLY\\input.txt"
+
 buffer: .space 1024
 
 new_buffer: .space 1024
-# file paths may be different from device to another
-fin: .asciiz "D:\\MIPS-ASSEMBLY\\calenderFile.txt"
-
 
 asciidigi : .space 255
 appointmentString : .space 1024
-conflict: .space 4  
 
 
-
-dayFound: .asciiz"\nDay Found"
-not_found: .asciiz"\nnot_found"
-no_conflict_sen : .asciiz"\nno conflict"
-view_slots_to_add_sen : .asciiz"\nSlots to add: "
 
 #holds the file content 
 file_content: .space 1024
-newLine: .asciiz "\n"
+
 dash: .asciiz "-"
 
-open_file_error: .asciiz"\nError! opening the file"
+
 
 welcome_message: .asciiz "\nWelcome to our program\n"
 
@@ -60,7 +55,7 @@ day_not_exist: .asciiz "\nDay not exist, try again\n"
 select_day:.asciiz "\nPlease choose a day: "  
 select_day_sentence_1:.asciiz "\nThe slots for day "
 another_day_q: .asciiz "\nEnter yes to enter another day, or any character to return to menu: "
-another_day_answer : .space 50
+another_day_answer : .space 10
 day: .space 10
 
 # to take the day input from the user
@@ -68,7 +63,7 @@ choiced_day_input: .space 10
 
 # To store the day without null terminator (used for comparison)
 choiced_day: .space 10
-day_slot :  .space 100
+day_slot :  .space 256
 line: .asciiz "\n______________________________________________________________________ \n "
 current_start_time: .space 10
 current_end_time: .space 10
@@ -118,17 +113,18 @@ conflict_occured: .asciiz "\nConflict occured, please enter another slot"
 Inavlid_end_sen : .asciiz "\nThe slot must be between 8 am and 5 pm"
 no_conflict_in_all_slots: .asciiz "\nNo conflict in all slots"
 day_not_Found: .asciiz "\nDay not found"
+this_day_slot: .asciiz "\nThis day slots are: \n"
+the_new_slot: .asciiz "\nThe new slot : "
 
+
+file_updated: .asciiz "\nFile has been updated!\n"
+
+newLine: .asciiz "\n"
 
 .text
 .globl main
 
 main: 	
-	la $a0, welcome_message	
-	li $a1, 256
-	li $v0, 4
-	syscall
-	
 	j START
 START: 
 	jal read_file 
@@ -291,34 +287,24 @@ read_file:
 	li   $a2, 0
 	syscall            # open a file (file descriptor returned in $v0)
 	
-	
+	 move $s0, $v0 
 	# Check if the file was opened successfully
-	bnez $v0, readFile
+	bnez $s0, readFile
 	
-	la $a0, open_file_error
-	li $a1, 256
-	li $v0, 4
-	syscall
 	
-	li $v0,4
-	la $a0, newLine
-	syscall
-	jr $ra 
-	
-	readFile:
-		move $t0, $v0      # Save the file descriptor 
+	readFile: 
 		# Read from file
 		li   $v0, 14       # system call for read from file
-		move $a0, $t0      # File descriptor 
+		move $a0, $s0      # File descriptor 
 		la   $a1, file_content  # Store file content
 		la   $a2, buffer   # address of buffer to which to read
 		syscall            # read from file
-		j closeFile
+		
 		
 	closeFile:
 		# Close the file 
 		li   $v0, 16       # system call for close file
-		move $a0, $t0      # file descriptor to close
+		move $a0, $s0      # file descriptor to close
 		syscall            # close file
 		jr $ra 
 
@@ -345,7 +331,8 @@ add_appointemnt:
 	
 	beq $v0 ,$zero, ask_user_to_enter_slot_add
 
-	la $a0, day_not_exist		
+	la $a0, day_not_exist
+	li $a1, 256
 	li $v0, 4
 	syscall
 	
@@ -355,15 +342,10 @@ add_appointemnt:
 	
 	ask_user_to_enter_slot_add:
 	
-	 la  $a0, choiced_day
+	la  $a0, choiced_day
         jal str_to_int
-       	 move $s3, $v0
+       	move $s3, $v0
 		 
-	move $a0, $s3
-        li $v0,1
-        syscall
-
-	
 	# To get this day slot
 	j get_slot
 		
@@ -371,7 +353,7 @@ add_appointemnt:
 		
 	la $t5,day_slot 
 			
-	la $a0, view_slots_to_modify_sen		
+	la $a0, this_day_slot		
 	li $a1, 256
 	li $v0, 4
 	syscall
@@ -382,7 +364,7 @@ add_appointemnt:
 	syscall
 		
 	la $a0, newLine		
-	li $a1, 256
+	li $a1, 5
 	li $v0, 4
 	syscall
 	
@@ -395,7 +377,7 @@ add_appointemnt:
         li $v0, 5
         syscall
         
-# Save it in $t0
+	# Save it in $t0
          move $t0, $v0
       
          ble $t0, 5, add_12_user_start
@@ -406,9 +388,7 @@ add_appointemnt:
         add_12_user_start:
         addi $t0, $t0, 12
       
-        j continue_slot_2
-
-
+        
         continue_slot_2:
         # Ask the user to enter the end time
         la $a0, enter_slot_2
@@ -447,13 +427,14 @@ add_appointemnt:
         li $v0, 4
         syscall
   
-        #read user's input and save in $s4
-      	la $a0,temp_category_add
+     #read user's input and save in $s4
+    la $a0,temp_category_add
 	la $a1, 10
 	li $v0, 8
 	syscall	
 	
-      	la $a0,temp_category_add
+     la $a0,temp_category_add
+	 la $s4, category_add_
 	la $v0, category_add_
 	jal remove_new_line
 	la $s4, category_add_
@@ -463,7 +444,7 @@ add_appointemnt:
 	
         la $t5,day_slot
         la $t7, current_start_time
-
+		
         loop_to_get_current_start_time:
         lb $t6, ($t5)
         addi $t5, $t5, 1
@@ -551,14 +532,19 @@ add_appointemnt:
         #reset
         la $t7, current_start_time
         la $t8, current_end_time
-
+		la $s4,  category_add_
 
         j loop_to_get_current_start_time
   ############################################################
         done_add:
         la $t7, current_start_time
+        la $a0, current_start_time
+        la $s4,  category_add_
+        jal containsInteger
+        beq $v0, $zero, first_slot_append
+      	la $t7, current_start_time
         la $t8, current_end_time
-	
+		la $s4,  category_add_
 	bge $t0,13, minus_12_for_start
 	bge $t1,13, minus_12_for_end
 	
@@ -575,19 +561,20 @@ add_appointemnt:
 	
 	
 	continue_to_add:
-        la $a1 , choiced_day
-
+	
+	
+	la $a1 , choiced_day
         
-          la $s7, appointmentString
-          jal Store_comma
-          jal store_space
+        la $s7, appointmentString
+        jal Store_comma
+        jal store_space
 
-          move $s1, $t0
-          bgt $s1,10, two_digits
+        move $s1, $t0
+        bge $s1,10, two_digits
           
           
-          addi $t0, $s1, 48 
-          sb $t0, 0( $s7)       
+        addi $t0, $s1, 48 
+        sb $t0, 0( $s7)       
         addi  $s7,  $s7, 1 
         
         j continue_to_store_dash
@@ -598,7 +585,7 @@ add_appointemnt:
           jal store_dash
 
           move $s1, $t1
-           bgt $s1,10, two_digits_
+           bge $s1,10, two_digits_
           
           
           addi $t0, $s1, 48 
@@ -616,6 +603,56 @@ add_appointemnt:
           jal store_space
           jal store_type
           j append
+          
+          
+          first_slot_append:
+          la $t7, current_start_time
+          la $t8, current_end_time
+		  la $s4,  category_add_
+          la $a1 , choiced_day
+          la $s7, appointmentString
+       
+          jal store_space
+          
+          move $s1, $t0
+          bge $s1,10, two_digits_num
+          
+            
+          addi $t0, $s1, 48 
+          sb $t0, 0( $s7)       
+          addi  $s7,  $s7, 1 
+        
+        j continue_to_store_dash_in_str
+        
+          two_digits_num:
+           jal convertTo_Ascii
+          
+          continue_to_store_dash_in_str:
+          
+          jal store_dash
+
+          move $s1, $t1
+          
+           bge $s1,10, two_digits_end_time
+             
+          addi $t0, $s1, 48 
+          sb $t0, 0( $s7)       
+        addi  $s7,  $s7, 1 
+          
+         j  continue_to_store_nums
+          
+          
+          two_digits_end_time:
+          
+          jal convertTo_Ascii
+          
+         continue_to_store_nums:
+          jal store_space
+          jal store_type
+          j append
+          
+          
+          
   ############################################################
   
   	              
@@ -662,6 +699,7 @@ add_appointemnt:
 
         
         store_type:
+        la $s4,  category_add_
         store_type_loop:
         lb $t9, ($s4)
         addi $s4,$s4,1
@@ -672,11 +710,13 @@ add_appointemnt:
         j store_type_loop
         
         done_tore_type:
-        
+         sb $zero , 0($s7)
         jr $ra
 #################################################
 
 append:	
+	
+	
 	# Initialize variables
 	li $s2, 0          # $s2 is the index of the buffer
         li $t3, 0      # $t3 will hold the day number
@@ -747,8 +787,6 @@ slash_store:
 	j go_back
 	
        go_back:
-       
-	
 	
 	sb $t7, 0($a3)
         addi $a3, $a3, 1
@@ -760,24 +798,7 @@ slash_store:
 	subi $s2, $s2, 2
        j load_address
 #######################################################
-isInteger:
-    # Load the character from $t0 into $a0
-    lb $a0, ($t0)
 
-    # Check if the character is between '0' and '9' in ASCII
-    li $t1, '0'
-    blt $a0, $t1, notInteger
-    li $t1, '9'
-    bgt $a0, $t1, notInteger
-
-    # Character is an integer
-    li $v0, 1            # Set result to 1 (true)
-    jr $ra               # Return from the function
-
-notInteger:
-    # Character is not an integer
-    li $v0, 0            # Set result to 0 (false)
-    jr $ra               # Return from the function
 #######################################################################
 load_address:
 # Load the address of the second string into $a1
@@ -803,19 +824,19 @@ end_copy_str2:
 #############################################################
 done_adding_:
 jal read_file 
+
+la $a0,file_updated
+	li $a1, 256
+	li $v0, 4
+	syscall
+	la $a0,newLine
+	li $a1, 5
+	li $v0, 4
+	syscall
 j menu
 
 ############################################################
 done_copying:
-	# Print the new calendar
-	li $v0, 4
-	la $a0, new_buffer
-	syscall
-
-
-        li $v0, 4
-	la $a0, newLine
-	syscall
 
         j write_file
 ###############################################################
@@ -827,9 +848,7 @@ write_file:
         move $s0, $v0  #save file descriptor in $s0
 
         bnez $s0, write_file_content
-	li $s0, 4
-	la $a0, open_file_error
-	syscall
+	
 ##############################################################
 
  write_file_content:
@@ -873,7 +892,8 @@ delete_appointemnt:
 	
 	beq $v0 ,$zero, ask_user_to_enter_slot
 
-	la $a0, day_not_exist		
+	la $a0, day_not_exist	
+	li $a1, 256
 	li $v0, 4
 	syscall
 	
@@ -900,7 +920,7 @@ delete_appointemnt:
 	syscall
 		
 	la $a0, newLine		
-	li $a1, 256
+	li $a1, 5
 	li $v0, 4
 	syscall
 	
@@ -1089,8 +1109,7 @@ delete_appointemnt:
 		la $t9, temp_category
 		
 	check_categ_loop:
-		lb $t4, ($t5)  
-		#lb $s1,($t5)       
+		lb $t4, ($t5)         
         	addi $t5, $t5, 1
         	beq $t4, '\n',check_the_slots_to_delete
         	beqz $t4, check_the_slots_to_delete
@@ -1157,28 +1176,74 @@ delete_appointemnt:
 		 li  $s3, ',' 
 		 sb $s3, 0($t6)        
         	addi $t6, $t6, 1 
-		j get_start_time_to_comapre
-		
-		
-			
+        	 li  $s3, ' ' 
+		 sb $s3, 0($t6)        
+        	addi $t6, $t6, 1 
+		j get_start_time_to_comapre	
 	
 	end_delete_loop:
 	
     	sb $zero, 0($t6)
     	la $t6, slot_after_delete 
 	
+	
+	# If we deleted the last slot in a line, we need to remove it;s comma
+	
+	la $a0,slot_after_delete 
+	
+	li $s2, 0
+	check_if_last_char_is_comma:
+	
+	find_length:
+	lb $t8, slot_after_delete($s2)        
+        addi $s2, $s2, 1
+        beqz $t8, length_found
+	j find_length
+	
+	 length_found:
+	 
+	
+	 check_if_comma:
+	 subi $s2, $s2, 1
+	 lb $t8, slot_after_delete($s2)   
+	 beq $t8, 'L',dont_remove_comma
+	 beq $t8, 'H',dont_remove_comma
+	 beq $t8, 'M',dont_remove_comma
+	 beq $t8, ',',remove_comma
+	   j check_if_comma
+	   
+	   
+	   
+	remove_comma:
+	li $s3, ' '
+	sb $s3,slot_after_delete($s2) 
+	  
+	dont_remove_comma:
+	
+	
+	la $a0,slot_after_delete 
+	li $a1, 256
+	li $v0, 4
+	syscall
+	la $a0,newLine
+	li $a1, 5
+	li $v0, 4
+	syscall
 	la $t1, choiced_day
 	
 	la $a3, new_buffer
-	
-	la $t4, file_content
+	li $s2, 0          # $s2 is the index of the buffer
+      
+	#la $t4, file_content
 	la $t7,day
 	
 	copy_file_content:
-	 	lb $t8, ($t4)         
-        	addi $t4, $t4, 1
+	 	lb $t8, file_content($s2)        
+        	addi $s2, $s2, 1
         	beqz $t8, end_copy_loop  
+		beq $t8, '\0',end_copy_loop  
         	beq $t8, ':', day_found_
+        	beq $t8, ' ', copy_file_content
         	sb $t8, 0($t7)        
         	addi $t7, $t7, 1       
 	j copy_file_content
@@ -1199,6 +1264,7 @@ delete_appointemnt:
         	addi $t7, $t7, 1
         	beqz $t8, store_colon  
         	beq $t8,'\0' , store_colon
+   
                	sb $t8, 0($a3)        
         	addi $a3, $a3, 1  
 	j store_day_num
@@ -1208,17 +1274,15 @@ delete_appointemnt:
        		sb $s3, 0($a3)
         	addi $a3, $a3, 1
         	
-        	 li  $s3, ' '  
-		 sb $s3, 0($a3)
-        	addi $a3, $a3, 1
         	
         	la $t7,day
 		beq $t9,$zero, store_new_day
-	la $t7,day
+		
+		la $t7,day
         	 
         	store_the_line:
-        	lb $t8, ($t4)         
-        	addi $t4, $t4, 1
+        	lb $t8, file_content($s2)         
+        	addi $s2, $s2, 1
         	
         	 sb $t8, 0($a3)        
         	addi $a3, $a3, 1 
@@ -1228,24 +1292,31 @@ delete_appointemnt:
 
 	
 	store_new_day:
-        	# store #t6
+        	# store what in t6
+        	
+        	 li  $s3, ' '  
+		 sb $s3, 0($a3)
+        	addi $a3, $a3, 1
+        	
         	store_the_rest:
 		lb $t8, ($t6)         
         	addi $t6, $t6, 1
         	beqz $t8, skip_the_line
+        	beq $t8,'\n' ,skip_the_line
         	beq $t8,'\0' ,skip_the_line
                	sb $t8, 0($a3)        
         	addi $a3, $a3, 1  
 	j store_the_rest
         	
         skip_the_line:
+       
         	 li  $s3, '\n'  
 		 sb $s3, 0($a3)
         	addi $a3, $a3, 1
         	
         	skip_the_line_loop:
-        	lb $t8, ($t4)         
-        	addi $t4, $t4, 1
+        	lb $t8, file_content($s2)     
+        	addi $s2, $s2, 1
         	beqz $t8,copy_file_content 
         	beq $t8,'\n',copy_file_content 
         	
@@ -1253,14 +1324,11 @@ delete_appointemnt:
         	
         
 	end_copy_loop :
-	# print to file
+	
 	sb $zero, 0($a3)
 	
 	la $a3,new_buffer
-	move $a0,$a3
-	li $a1, 256
-	li $v0, 4
-	syscall
+	
 	
 
 write_file_after_delete:
@@ -1271,9 +1339,7 @@ write_file_after_delete:
         move $s0, $v0  #save file descriptor in $s0
 
         bnez $s0,  write_file_content_after_delete
-	li $s0, 4
-	la $a0, open_file_error
-	syscall
+	
 ##############################################################
 
  write_file_content_after_delete:
@@ -1289,6 +1355,12 @@ write_file_after_delete:
 		syscall
 		
 		
+		
+		jal read_file
+		la $a0,file_updated
+		li $a1, 256
+		li $v0, 4
+		syscall
 		
  		j menu
 
@@ -1440,7 +1512,7 @@ count_num_of_hours:
 	
 	 print_L:
 	 	la $a0, print_L_sen
- 	    	li $a1, 256
+ 	    li $a1, 256
 		li $v0, 4
 		syscall
 		
@@ -1449,6 +1521,7 @@ count_num_of_hours:
 		syscall
 		
 		la $a0, newLine
+		li $a1, 5
 		li $v0, 4
 		syscall
 		
@@ -1466,6 +1539,7 @@ count_num_of_hours:
 		syscall
 		
 		la $a0, newLine
+		li $a1, 5
 		li $v0, 4
 		syscall
 	j menu
@@ -1480,6 +1554,7 @@ count_num_of_hours:
 		syscall
 		
 		la $a0, newLine
+		li $a1, 5
 		li $v0, 4
 		syscall
 		j menu
@@ -1524,8 +1599,10 @@ count_num_of_hours:
 	
 	division_by_zero:
 	  # Handle division by zero
-    	li $v0, 4
+    	
     	la $a0, div_by_zero
+		li $a1, 256
+		li $v0, 4
     	syscall
     
     	j menu
@@ -1578,13 +1655,13 @@ get_given_slot_in_given_day:
 	# If the day exist, branch to get slot 
 	beq $v0 ,$zero, get_slot_in_day
 
-	# TODO : return to menu ? 
-	la $a0, day_not_exist		
+	la $a0, day_not_exist	
+li $a1, 256	
 	li $v0, 4
 	syscall
 	
-	# Ask the user to enter another day
-	j get_given_slot_in_given_day
+	# return to menu
+	j menu
 	
 	get_slot_in_day:
 	
@@ -1652,18 +1729,8 @@ get_given_slot_in_given_day:
 		
 		la $t5,day_slot 
 		la $t2, current_start_time
-		
-		# TODO remove
-		la $a0, day_slot 		
-		li $a1, 256
-		li $v0, 4
-		syscall
-		
-		la $a0, newLine		
-		li $a1, 256
-		li $v0, 4
-		syscall
-		
+	
+	
 		# Exctract the start time to compare it with the given start time
    		loop_to_get_start_time:
         	lb $t6, ($t5)         
@@ -1680,7 +1747,7 @@ get_given_slot_in_given_day:
     		process_dash:
     		sb $zero, 0($t2)
     		 
-    		la  $a0, current_start_time
+    	la  $a0, current_start_time
    	 	jal str_to_int
 		move $t2, $v0
 		ble $t2, 5, add_12_1
@@ -1751,9 +1818,6 @@ get_given_slot_in_given_day:
    	 	subi $t2,$t2,12
    	 	
    	 	print_start_time_0:
-   	 	la $a0, space
-   	 	li $v0,4
-   	 	syscall
    	 	
    	 	move $a0, $t2
    	 	li $v0,1
@@ -1772,9 +1836,6 @@ get_given_slot_in_given_day:
    	 	subi $t0,$t0,12
    	 	
    	 	print_start_time_1:
-   	 	la $a0, space
-   	 	li $v0,4
-   	 	syscall
    	 	
    	 	move $a0, $t0
    	 	li $v0,1
@@ -1799,6 +1860,7 @@ get_given_slot_in_given_day:
    	 	print_res:
    	 	
    		la $a0, dash
+		la $a1, 5
    	 	li $v0,4
    	 	syscall
    	 	
@@ -1807,13 +1869,20 @@ get_given_slot_in_given_day:
    	 	syscall
    	 	
    	 	la $a0, space
+		la $a1, 5
    	 	li $v0,4
    	 	syscall
    	 	
    	 	la $a0, category
+		la $a1, 10
    	 	li $v0,4
    	 	syscall
    	 	
+   	 	
+   	 	la $a0, space
+		la $a1, 5
+   	 	li $v0,4
+   	 	syscall
    	 	
 		skip:
 	 	#reset
@@ -1877,7 +1946,8 @@ get_day:
 	
 	beq $v0 ,$zero, get_slot
 
-	la $a0, day_not_exist		
+	la $a0, day_not_exist	
+li $a1, 256	
 	li $v0, 4
 	syscall
 	j menu
@@ -1928,8 +1998,12 @@ get_day:
             
  	slot_found: 
  	    	 sb $zero, 0($t5)
- 	    	# If the user choiced c, returh the slot and dont print it 
- 	    	move $a0,$a3	
+ 	    	# If the user choiced c, return the slot and dont print it 
+ 	    la $t5, day_slot
+		
+
+		
+		move $a0,$a3	
 		la $a1,c
 		jal strcmp		
 		beq $v0,$zero, continue_process_slot
@@ -1950,23 +2024,27 @@ get_day:
 		syscall
 		
 		la $a0,choiced_day
-		li $a1, 256
-		li $v0, 4
-		syscall
-		la $a0,newLine
+		li $a1, 10
 		li $v0, 4
 		syscall
 		
- 	    	la $a0, day_slot
- 	    	li $a1, 256
-		li $v0, 4
-		syscall
 		la $a0,newLine
+		 li $a1, 5
 		li $v0, 4
 		syscall
 		
-		#la $t5, day_slot
+ 	    la $a0, day_slot
+ 	    li $a1, 256
+		li $v0, 4
+		syscall
+		la $a0,newLine
+		li $a1, 5
+		li $v0, 4
+		syscall
+		
+	
 		move $a0,$a3	
+		
 		la $a1,a
 		jal strcmp
 		beq $v0,$zero, end_loop_0
@@ -2031,6 +2109,33 @@ check_day:
 		move  $ra, $s0	
 		la $a1, choiced_day
 		jr $ra
+		
+containsInteger:
+   
+check_digit:
+    lb $t9, 0($a0)         # Load the byte (character) at the current position
+    addi $a0, $a0, 1        # Move to the next character
+    
+    # Check if it's the null terminator (end of the string)
+    beq $t9, $zero, endOfCheckDigits 
+    beq $t9, '\n', endOfCheckDigits
+    beq $t9, ' ', endOfCheckDigits
+    # Check if the current character is a digit (ASCII values 48 to 57)
+    bge $t9, 48, integerFound
+  
+    j check_digit           # Repeat the process for the next character
+
+integerFound:
+    ble $t9, 57, intFound
+    j check_digit
+        
+intFound:
+    li $v0, 1             
+    jr $ra 
+    
+endOfCheckDigits:
+    li $v0, 0             # Set $v0 to 1 to indicate no integer found
+    jr $ra 
 
 strcmp:  		
 	loop1:
@@ -2102,7 +2207,6 @@ str_to_int:
 
     
 exit:
-
 	
 	la $a0, quit_message
 	li $a1, 256
