@@ -94,7 +94,7 @@ print_M_sen: .asciiz "\nNumber of Meetings in hours: "
 div_by_zero: .asciiz "\nError: Division by zero\n"
 ratio_answer: .asciiz "\nThe ratio: "
 avg_answer: .asciiz "\nThe average lectures per day: "
-view_slots_to_modify_sen: .asciiz "\nThe slots for this day are shown below, please choose one of these slots with it's type: \n"
+view_slots_to_modify_sen: .asciiz "\nThe slots for this day are shown below\n"
 enter_type: .asciiz "\nPlease enter the slot type: "
 slot_after_delete: .space 100
 
@@ -134,64 +134,64 @@ menu:
 	# Print the menu to the user to view available features
 	
 	la $a0, line		
-	li $a1, 256
+	li $a1, 100
 	li $v0, 4
 	syscall
 	
 	la $a0, view_per_day		
-	li $a1, 256
+	li $a1, 100
 	li $v0, 4
 	syscall
 	
 	la $a0, view_per_set_days		
-	li $a1, 256
+	li $a1, 100
 	li $v0, 4
 	syscall
 	
 	la $a0, view_given_slot		
-	li $a1, 256
+	li $a1, 100
 	li $v0, 4
 	syscall
 	
 	la $a0, view_lec_num		
-	li $a1, 256
+	li $a1, 100
 	li $v0, 4
 	syscall
 	
 	la $a0, view_OH_num		
-	li $a1, 256
+	li $a1, 100
 	li $v0, 4
 	syscall
 	
 	la $a0, view_meets_num		
-	li $a1, 256
+	li $a1, 100
 	li $v0, 4
 	syscall
 	
 	la $a0, view_avg_lec		
-	li $a1, 256
+	li $a1, 100
 	li $v0, 4
 	syscall
 
 
 	la $a0, view_ratio_lec_OH		
-	li $a1, 256
+	li $a1, 100
 	li $v0, 4
 	syscall
 	
 	la $a0,add_new_appointemnt_sen		
-	li $a1, 256
+	li $a1, 100
 	li $v0, 4
 	syscall
 	
 	la $a0, delete_appointemnt_sen	
-	li $a1, 256
+	li $a1, 100
 	li $v0, 4
 	syscall
 	
 	
 	la $a0, quit					
-	li $a1, 256
+	li $a1, 100
 	li $v0, 4
 	syscall
 	
@@ -544,7 +544,7 @@ add_appointemnt:
         beq $v0, $zero, first_slot_append
       	la $t7, current_start_time
         la $t8, current_end_time
-		la $s4,  category_add_
+	la $s4,  category_add_
 	bge $t0,13, minus_12_for_start
 	bge $t1,13, minus_12_for_end
 	
@@ -611,6 +611,24 @@ add_appointemnt:
 		  la $s4,  category_add_
           la $a1 , choiced_day
           la $s7, appointmentString
+       
+       bge $t0,13, minus_12_for_start_time
+	bge $t1,13, minus_12_for_end_time
+	
+	j continue_to_add_slot_
+	
+	minus_12_for_start_time:
+	subi $t0,$t0,12
+	
+	bge $t1,13, minus_12_for_end_time
+	j continue_to_add_slot_
+	
+	minus_12_for_end_time:
+	subi $t1,$t1,12
+       
+       
+       continue_to_add_slot_:
+       
        
           jal store_space
           
@@ -704,6 +722,7 @@ add_appointemnt:
         lb $t9, ($s4)
         addi $s4,$s4,1
         beq $t9,'\n',done_tore_type
+		  beq $t9,'\r',done_tore_type
         beqz $t9,done_tore_type 
         sb $t9 , 0($s7)
        	addi $s7, $s7, 1
@@ -730,7 +749,7 @@ search_loop:
 	lb $t7, file_content($s2)  # Load a byte from the buffer, t7 will hold a char from the buffer
 	sb $t7, 0($a3) #store that byte in the new buffer
         addi $a3, $a3, 1 # move to the next position in the new buffer to hold the next char
-
+ beq $t7, '\r',  done_adding_
         beqz $t7, done_adding_  # the day is there because we call check_day earlier
         beq $t7, '\n', go_to_the_next_line    # If end of line, reset s3 so it can hold the next day number
         beq $t7, ':', extract_day  # after find  the day , go back here to chenge it to int # s2 will be after :
@@ -910,7 +929,7 @@ delete_appointemnt:
 	la $t5,day_slot 
 			
 	la $a0, view_slots_to_modify_sen		
-	li $a1, 256
+	li $a1, 100
 	li $v0, 4
 	syscall
 	
@@ -920,7 +939,7 @@ delete_appointemnt:
 	syscall
 		
 	la $a0, newLine		
-	li $a1, 5
+	li $a1, 10
 	li $v0, 4
 	syscall
 	
@@ -982,13 +1001,14 @@ delete_appointemnt:
 	
 	la $t7, temp_start
 	
-	move $s1,$t5
-	move $s2,$t5
-	
+	la $t0, start_time_to_modify
+	la $t5,day_slot 
 	get_start_time_to_comapre:
 		lb $t4, ($t5)       
         	addi $t5, $t5, 1
         	beqz $t4, end_delete_loop
+        	beq  $t4,'\r', end_delete_loop
+        	beq  $t4,'\n', end_delete_loop
         	beq $t4, '-', start_time_found_
         	beq $t4, ' ', get_start_time_to_comapre
         	sb $t4, 0($t7)
@@ -1004,13 +1024,14 @@ delete_appointemnt:
 		move $a0,$t7
 		jal strcmp 
 		
-		
-		
 		move $s4,$t7
+		
+		
+		
 		
 		beq $v0,$zero, go_check_end_time
 		
-		
+
 		save_this_slot_start_time:
 		lb $t4, ($s4)
 		addi $s4, $s4, 1
@@ -1050,6 +1071,8 @@ delete_appointemnt:
 	 	lb $t4, ($t5)         
         	addi $t5, $t5, 1
         	beq $t4, ' ', end_time_found
+        	beq $t4, '\r', end_time_found
+        	beq $t4, '\n', end_time_found
         	beqz $t4,  end_time_found
         	sb $t4, 0($t8)         
         	addi $t8, $t8, 1
@@ -1069,6 +1092,7 @@ delete_appointemnt:
 		
 		
 		beq $v0,$zero, go_check_categ
+		
 		
 		
 		
@@ -1101,9 +1125,26 @@ delete_appointemnt:
 		 li   $s3, ' ' 
 		 sb $s3, 0($t6)        
         	addi $t6, $t6, 1 
-		j save_the_rest_of_slot
+        	
+        	
+        	
+        	 save_the_rest:
+        	lb $t4, ($t5)
+		addi $t5, $t5, 1
+		beqz $t4,end_delete_loop
+        	beq $t4, '\n', end_delete_loop
+        	beq $t4, '\r', end_delete_loop
+		sb $t4, 0($t6)        
+        	addi $t6, $t6, 1   
+        	beq $t4, ',', add_space_
+		j save_the_rest
 		
-		
+		 add_space_:
+		  li  $s3, ' '  
+		 sb $s3, 0($t6)        
+        	addi $t6, $t6, 1 
+        	
+		j get_start_time_to_comapre	
 	
 	go_check_categ:
 		la $t9, temp_category
@@ -1115,7 +1156,7 @@ delete_appointemnt:
         	beqz $t4, check_the_slots_to_delete
         	beq $t4, ',', check_the_slots_to_delete
         	beq $t4, '\r', check_the_slots_to_delete
-        	
+        	beq $t4, ' ', check_categ_loop
         	sb $t4, 0($t9)         
         	addi $t9, $t9, 1    	
 	j check_categ_loop
@@ -1128,10 +1169,11 @@ delete_appointemnt:
 		move $a0,$t3
 		jal strcmp 
 		
-		move $s6,$t9
+		
 		beq $v0,$zero, get_start_time_to_comapre
 		
-		
+		move $s6,$t9
+	
 		save_start_2:
 		lb $t4, ($s4)
 		addi $s4, $s4, 1
@@ -1185,11 +1227,8 @@ delete_appointemnt:
 	
     	sb $zero, 0($t6)
     	la $t6, slot_after_delete 
+
 	
-	
-	# If we deleted the last slot in a line, we need to remove it;s comma
-	
-	la $a0,slot_after_delete 
 	
 	li $s2, 0
 	check_if_last_char_is_comma:
@@ -1198,6 +1237,7 @@ delete_appointemnt:
 	lb $t8, slot_after_delete($s2)        
         addi $s2, $s2, 1
         beqz $t8, length_found
+	beq $t8,'\r' , length_found
 	j find_length
 	
 	 length_found:
@@ -1206,29 +1246,39 @@ delete_appointemnt:
 	 check_if_comma:
 	 subi $s2, $s2, 1
 	 lb $t8, slot_after_delete($s2)   
+	 beq $t8, '\n',dont_remove_comma
+	 beq $t8, '\r',dont_remove_comma
+	 beq $t8, ':',dont_remove_comma
 	 beq $t8, 'L',dont_remove_comma
 	 beq $t8, 'H',dont_remove_comma
 	 beq $t8, 'M',dont_remove_comma
 	 beq $t8, ',',remove_comma
-	   j check_if_comma
+	 j check_if_comma
 	   
 	   
 	   
 	remove_comma:
 	li $s3, ' '
 	sb $s3,slot_after_delete($s2) 
+	addi $s2,$s2,1
+	sb $zero,slot_after_delete($s2) 
 	  
 	dont_remove_comma:
 	
+	
+	la $t6,slot_after_delete
 	
 	la $a0,slot_after_delete 
 	li $a1, 256
 	li $v0, 4
 	syscall
+	
+	
 	la $a0,newLine
 	li $a1, 5
 	li $v0, 4
 	syscall
+	
 	la $t1, choiced_day
 	
 	la $a3, new_buffer
@@ -1244,6 +1294,7 @@ delete_appointemnt:
 		beq $t8, '\0',end_copy_loop  
         	beq $t8, ':', day_found_
         	beq $t8, ' ', copy_file_content
+        	beq $t8, '\r', end_copy_loop 
         	sb $t8, 0($t7)        
         	addi $t7, $t7, 1       
 	j copy_file_content
@@ -1257,14 +1308,15 @@ delete_appointemnt:
 	la $a0,day
 	jal strcmp
 	move $t9,$v0
-	la $t7,day
+		
 	
 	store_day_num:
 		lb $t8, ($t7)         
         	addi $t7, $t7, 1
         	beqz $t8, store_colon  
         	beq $t8,'\0' , store_colon
-   
+        	beq $t8,'\n' , store_colon
+   		beq $t8,'\r' , store_colon
                	sb $t8, 0($a3)        
         	addi $a3, $a3, 1  
 	j store_day_num
@@ -1276,21 +1328,27 @@ delete_appointemnt:
         	
         	
         	la $t7,day
+        	
+        	
+		
 		beq $t9,$zero, store_new_day
 		
-		la $t7,day
+		
         	 
         	store_the_line:
-        	lb $t8, file_content($s2)         
+        	lb $t8, file_content($s2) 
         	addi $s2, $s2, 1
-        	
-        	 sb $t8, 0($a3)        
-        	addi $a3, $a3, 1 
-        	beq $t8,'\n',copy_file_content 
-        	beqz $t8,copy_file_content 
+        	beq $t8,'\n',copy_new_line 
+        	beq $t8,'\r',copy_file_content  
+        	beqz $t8,copy_file_content	
+        	sb $t8, 0($a3)   			
+		addi $a3, $a3, 1      
         	j store_the_line
-
-	
+	copy_new_line :
+	li $s3, '\n'
+	sb $s3, 0($a3)   			
+		addi $a3, $a3, 1   
+	j copy_file_content
 	store_new_day:
         	# store what in t6
         	
@@ -1298,11 +1356,15 @@ delete_appointemnt:
 		 sb $s3, 0($a3)
         	addi $a3, $a3, 1
         	
+        	la $t6,slot_after_delete
+    
+        	
         	store_the_rest:
-		lb $t8, ($t6)         
-        	addi $t6, $t6, 1
+		lb $t8, 0($t6)         
+        	addi  $t6 ,  $t6 , 1
         	beqz $t8, skip_the_line
         	beq $t8,'\n' ,skip_the_line
+        	beq $t8,'\r' ,skip_the_line
         	beq $t8,'\0' ,skip_the_line
                	sb $t8, 0($a3)        
         	addi $a3, $a3, 1  
@@ -1312,19 +1374,21 @@ delete_appointemnt:
        
         	 li  $s3, '\n'  
 		 sb $s3, 0($a3)
-        	addi $a3, $a3, 1
+        	 addi $a3, $a3, 1
         	
         	skip_the_line_loop:
         	lb $t8, file_content($s2)     
         	addi $s2, $s2, 1
         	beqz $t8,copy_file_content 
         	beq $t8,'\n',copy_file_content 
-        	
+        	beq $t8,'\r',copy_file_content
         	j skip_the_line_loop
         	
         
 	end_copy_loop :
-	
+	#li $s3 , '\n'
+	#sb $s3, 0($a3)
+	addi $a3, $a3, 1
 	sb $zero, 0($a3)
 	
 	la $a3,new_buffer
@@ -1353,17 +1417,14 @@ write_file_after_delete:
 		li $v0, 16
 		move $a0, $s0
 		syscall
-		
-		
-		
 		jal read_file
+		
 		la $a0,file_updated
 		li $a1, 256
 		li $v0, 4
 		syscall
-		
- 		j menu
-
+			
+ j menu	
 
 count_num_of_hours:
 	li $t0, 0 #to srore lectures
@@ -1408,6 +1469,7 @@ count_num_of_hours:
         	addi $t4, $t4, 1
         	beqz $t6, end_adding
 		beq $t6, ' ', end_time_done
+		beq $t6, '\r', end_time_loop
 		sb $t6, 0($t5)        
         	addi $t5, $t5, 1   
        
@@ -1959,7 +2021,8 @@ li $a1, 256
    	loop_0:
         	lb $t6, ($t4)         
         	addi $t4, $t4, 1
-        	beqz $t6, end_loop_0   
+        	beqz $t6, end_loop_0  
+        	beq $t6,'\r' , end_loop_0  
         	beq $t6, '\n', loop_0
         	beq $t6, ':', process_slot 
 
@@ -1983,6 +2046,7 @@ li $a1, 256
         skip_line_0:
             lb $t6, ($t4)
             beqz $t6, loop_0    # Exit the loop if the null terminator is encountered
+             beq $t6, '\r', loop_0  
             beq $t6, '\n', loop_0  # Exit the loop when newline is encountered
             addi $t4, $t4, 1
             j    skip_line_0
@@ -1990,6 +2054,7 @@ li $a1, 256
          copy_slot:
             lb $t6, ($t4)
             beqz $t6, slot_found    
+              beq $t6, '\r', slot_found  
             beq $t6, '\n', slot_found    
             sb $t6 , 0($t5)
             addi $t4, $t4, 1
@@ -2064,6 +2129,7 @@ check_day:
         lb $t6, ($t4)         # Load the byte at the current address in $t4
         addi $t4, $t4, 1
         beqz $t6, end_loop    # Exit the loop if the null terminator is encountered
+         beq $t6, '\r',  end_loop
         beq $t6, '\n', end_line  # If newline is encountered, go to end_line
         beq $t6, ':', process_colon  # If colon is encountered, process the day number
 
@@ -2090,6 +2156,7 @@ check_day:
          skip_line:
             lb $t6, ($t4)
             beqz $t6, loop    # Exit the loop if the null terminator is encountered
+            beq $t6, '\r', loop
             beq $t6, '\n', loop  # Exit the loop when newline is encountered
             addi $t4, $t4, 1
             j skip_line
