@@ -1872,6 +1872,12 @@ li $a1, 256
 		check_the_slots:
    	 	sb $zero, 0($t4)	
    	 	
+			
+		# t0 is the user start time input, t2 is the current slot start time 
+		# t1 is the user end time imput, t3 is the current slot end time 
+		
+		# Make comparison to know if we should include the slot or not 
+		
    	 	#branch if t0 is greater than or equal t2
    	 	bge $t0,$t2, check_second_slot
    	 	
